@@ -21,6 +21,8 @@ import net.momirealms.customnameplates.api.*;
 import net.momirealms.customnameplates.api.event.NameplatesReloadEvent;
 import net.momirealms.customnameplates.api.feature.ChatListener;
 import net.momirealms.customnameplates.api.feature.JoinQuitListener;
+import net.momirealms.customnameplates.api.feature.PlayerListener;
+import net.momirealms.customnameplates.api.helper.AdventureHelper;
 import net.momirealms.customnameplates.api.helper.VersionHelper;
 import net.momirealms.customnameplates.backend.feature.actionbar.ActionBarManagerImpl;
 import net.momirealms.customnameplates.backend.feature.advance.AdvanceManagerImpl;
@@ -52,10 +54,10 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.InputStream;
@@ -78,6 +80,7 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
     private final JavaPlugin bootstrap;
 
     private final List<JoinQuitListener> joinQuitListeners = new ArrayList<>();
+    private final List<PlayerListener> playerListeners = new ArrayList<>();
 
     private boolean loaded = false;
 
@@ -132,6 +135,7 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         }
 
         BukkitNetworkManager networkManager = new BukkitNetworkManager(this);
+        this.mainTask = new MainTask(this);
         this.packetSender = networkManager;
         this.pipelineInjector = networkManager;
         this.commandManager = new BukkitCommandManager(this);
@@ -140,13 +144,13 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         this.senderFactory = new BukkitSenderFactory(this);
         this.configManager = new BukkitConfigManager(this);
         this.translationManager = new TranslationManager(this);
-        this.placeholderManager = new PlaceholderManagerImpl(this);
         this.actionBarManager = new ActionBarManagerImpl(this);
         this.bossBarManager = new BossBarManagerImpl(this);
         this.advanceManager = new AdvanceManagerImpl(this);
         this.backgroundManager = new BackgroundManagerImpl(this);
         this.bubbleManager = new BubbleManagerImpl(this);
         this.nameplateManager = new NameplateManagerImpl(this);
+        this.placeholderManager = new PlaceholderManagerImpl(this);
         this.imageManager = new ImageManagerImpl(this);
         this.unlimitedTagManager = new UnlimitedTagManagerImpl(this);
         this.requirementManager = new BukkitRequirementManager(this);
@@ -154,11 +158,13 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         this.chatManager = new BukkitChatManager(this);
         this.resourcePackManager = new ResourcePackManagerImpl(this);
         this.eventManager = EventManager.create(this);
+        this.api = new CustomNameplatesAPI(this);
 
-        this.registerJoinQuitListener((JoinQuitListener) storageManager);
-        this.registerJoinQuitListener((JoinQuitListener) actionBarManager);
-        this.registerJoinQuitListener((JoinQuitListener) bossBarManager);
-        this.registerJoinQuitListener((JoinQuitListener) unlimitedTagManager);
+        this.joinQuitListeners.add((JoinQuitListener) storageManager);
+        this.joinQuitListeners.add((JoinQuitListener) actionBarManager);
+        this.joinQuitListeners.add((JoinQuitListener) bossBarManager);
+        this.joinQuitListeners.add((JoinQuitListener) unlimitedTagManager);
+        this.playerListeners.add((PlayerListener) unlimitedTagManager);
         this.chatManager.registerListener((ChatListener) bubbleManager);
 
         Bukkit.getPluginManager().registerEvents(this, getBootstrap());
@@ -229,11 +235,14 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         this.joinQuitListeners.clear();
         HandlerList.unregisterAll(this);
 
+        AdventureHelper.clearCache();
+
         this.loaded = false;
     }
 
     @Override
     public void reload() {
+        AdventureHelper.clearCache();
         // cancel task
         if (this.scheduledMainTask != null)
             this.scheduledMainTask.cancel();
@@ -289,7 +298,7 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
     }
 
     @Override
-    public SchedulerAdapter<?> getScheduler() {
+    public SchedulerAdapter<Location> getScheduler() {
         return scheduler;
     }
 
@@ -317,7 +326,7 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         return instance;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onJoin(PlayerJoinEvent event) {
         CNPlayer cnPlayer = new BukkitCNPlayer(this, event.getPlayer());
         CNPlayer previous = onlinePlayerMap.put(cnPlayer.uuid(), cnPlayer);
@@ -346,6 +355,36 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
 
         for (JoinQuitListener listener : joinQuitListeners) {
             listener.onPlayerQuit(cnPlayer);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onChangeWorld(PlayerChangedWorldEvent event) {
+        CNPlayer cnPlayer = getPlayer(event.getPlayer().getUniqueId());
+        if (cnPlayer != null) {
+            for (PlayerListener listener : playerListeners) {
+                listener.onChangeWorld(cnPlayer);
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onRespawn(PlayerRespawnEvent event) {
+        CNPlayer cnPlayer = getPlayer(event.getPlayer().getUniqueId());
+        if (cnPlayer != null) {
+            for (PlayerListener listener : playerListeners) {
+                listener.onRespawn(cnPlayer);
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        CNPlayer cnPlayer = getPlayer(event.getPlayer().getUniqueId());
+        if (cnPlayer != null) {
+            for (PlayerListener listener : playerListeners) {
+                listener.onTeleport(cnPlayer);
+            }
         }
     }
 

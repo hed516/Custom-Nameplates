@@ -59,6 +59,8 @@ public interface Tag {
      */
     boolean affectedByScaling();
 
+    boolean affectedBySpectator();
+
     /**
      * Hides the tag for all viewers.
      */
@@ -151,19 +153,19 @@ public interface Tag {
     double getTextHeight(CNPlayer viewer);
 
     /**
-     * Updates the tag state when the player crouches.
+     * Sets the dark mode for the tag.
      *
-     * @param isCrouching true if the player is crouching, false otherwise
+     * @param dark whether the tag should be dark
      */
-    void onPlayerCrouching(boolean isCrouching);
+    void darkTag(boolean dark);
 
     /**
-     * Updates the tag state when the player crouches for a specific viewer.
+     * Sets the dark mode for the tag for a specific viewer.
      *
-     * @param viewer the player to update
-     * @param isCrouching true if the player is crouching, false otherwise
+     * @param viewer the player for whom the dark mode should be applied
+     * @param dark whether the tag should be dark for the specific viewer
      */
-    void onPlayerCrouching(CNPlayer viewer, boolean isCrouching);
+    void darkTag(CNPlayer viewer, boolean dark);
 
     /**
      * Updates the tag scale when the player's scale changes.
@@ -186,6 +188,11 @@ public interface Tag {
     void updateTranslation();
 
     /**
+     * Updates the translation of the tag for a certain player
+     */
+    void updateTranslation(CNPlayer viewer);
+
+    /**
      * Returns the scaling vector of the tag for a specific viewer.
      *
      * @param viewer the player to check
@@ -200,4 +207,11 @@ public interface Tag {
      * @return the translation vector
      */
     Vector3 translation(CNPlayer viewer);
+
+    /**
+     * Returns if the tag has a relative translation
+     *
+     * @return has or not
+     */
+    boolean relativeTranslation();
 }

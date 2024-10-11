@@ -62,7 +62,7 @@ public class NameplatesForcePreviewCommand extends BukkitCommandFeature<CommandS
                 }))
                 .optional("time", IntegerParser.integerParser(0))
                 .handler(context -> {
-                    if (!ConfigManager.nameplateModule()) return;
+                    if (!ConfigManager.nametagModule()) return;
                     Player bukkitPlayer = context.get("player");
                     CNPlayer player = plugin.getPlayer(bukkitPlayer.getUniqueId());
                     if (player == null || !player.isLoaded()) {
@@ -79,8 +79,8 @@ public class NameplatesForcePreviewCommand extends BukkitCommandFeature<CommandS
                         player.equippedNameplate(optionalNameplate.get());
                     }
 
-                    if (!player.isPreviewing())
-                        plugin.getUnlimitedTagManager().setPreviewing(player, true);
+                    if (!player.isTempPreviewing())
+                        plugin.getUnlimitedTagManager().setTempPreviewing(player, true);
 
                     SchedulerTask task = plugin.getScheduler().asyncLater(() -> {
                         if (!player.isOnline()) {
@@ -88,7 +88,7 @@ public class NameplatesForcePreviewCommand extends BukkitCommandFeature<CommandS
                         }
 
                         if (!plugin.getUnlimitedTagManager().isAlwaysShow()) {
-                            plugin.getUnlimitedTagManager().setPreviewing(player, false);
+                            plugin.getUnlimitedTagManager().setTempPreviewing(player, false);
                         }
 
                         if (specified) {

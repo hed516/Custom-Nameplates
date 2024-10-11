@@ -21,10 +21,7 @@ import net.momirealms.customnameplates.api.CNPlayer;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.placeholder.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 public class PreParsedDynamicText {
@@ -35,11 +32,11 @@ public class PreParsedDynamicText {
     private boolean init = false;
 
     public PreParsedDynamicText(String text) {
-        this.text = text;
+        this.text = Objects.requireNonNull(text);
     }
 
     public PreParsedDynamicText(String text, boolean init) {
-        this.text = text;
+        this.text = Objects.requireNonNull(text);
         if (init) init();
     }
 

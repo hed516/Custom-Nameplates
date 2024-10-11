@@ -10,7 +10,7 @@ conditional-text:
             value2: "300"
           '!gamemode': survival
     priority_2:
-      text: '%np_static_money_hud%%np_offset_-180%%np_static_other_actionbar%'
+      text: '%np_static_money_hud%%np_offset_-179%%np_static_other_actionbar%'
       conditions:
         '!equals':
           value1: '%np_actionbar%'
@@ -34,7 +34,15 @@ conditional-text:
         weather:
           - thunder
 
-# https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/nameplate-text
+# https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/background-nameplate-bubble-text
+bubble-text:
+  chat:
+    bubble: chat_1
+    text: '<black>Nice to meet you!</black>'
+    left-margin: 1
+    right-margin: 1
+
+# https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/background-nameplate-bubble-text
 nameplate-text:
   halloween:
     nameplate: halloween
@@ -42,7 +50,7 @@ nameplate-text:
     left-margin: 1
     right-margin: 1
 
-# https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/background-text
+# https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/background-nameplate-bubble-text
 background-text:
   location:
     background: bedrock_1
@@ -101,7 +109,7 @@ shift-text:
     text: "Your Location: %np_switch_world% (%player_x%,%player_y%,%player_z%)"
     font: shift_1
   time:
-    text: "Time: %np_time%"
+    text: "Time: %np_time_12%"
     font: shift_1
   weather:
     text: "Weather: %np_conditional_weather%"
@@ -109,12 +117,12 @@ shift-text:
   update:
     text: "A newer version of CustomNameplates is available!"
     font: shift_1
-  money:
-    text: "%vault_eco_balance%"
-    font: shift_1
   hello:
     text: "Hello 여보세요 你好 こんにちは, Thanks for using CustomNameplates"
     font: shift_1
+  money:
+    text: "%vault_eco_balance%"
+    font: shift_2
 
 # https://mo-mi.gitbook.io/xiaomomi-plugins/plugin-wiki/customnameplates/custom-placeholders/switch-text
 switch-text:

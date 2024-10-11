@@ -44,8 +44,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Objects.requireNonNull;
-
 @SuppressWarnings("DuplicatedCode")
 public class PlaceholderManagerImpl implements PlaceholderManager {
 
@@ -53,10 +51,11 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
 
     private final CustomNameplates plugin;
     private final HashMap<String, Integer> refreshIntervals = new HashMap<>();
+    private final HashMap<Integer, Integer> fasterRefreshIntervals = new HashMap<>();
     private final Map<String, Placeholder> registeredPlaceholders = new HashMap<>();
     private final HashMap<Placeholder, List<PreParsedDynamicText>> childrenText = new HashMap<>();
-    private final List<PreParsedDynamicText> delayedInitTexts = new ArrayList<>();
     private final HashMap<String, Placeholder> nestedPlaceholders = new HashMap<>();
+    private final List<PreParsedDynamicText> delayedInitTexts = new ArrayList<>();
 
     public PlaceholderManagerImpl(CustomNameplates plugin) {
         this.plugin = plugin;
@@ -84,7 +83,10 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             Placeholder placeholder = entry.getKey();
             for (PreParsedDynamicText preParsedText : entry.getValue()) {
                 preParsedText.init();
-                placeholder.addChildren(preParsedText.placeholders());
+                for (Placeholder child : preParsedText.placeholders()) {
+                    placeholder.addChild(child);
+                    child.addParent(placeholder);
+                }
             }
             this.nestedPlaceholders.put(placeholder.id().replace("%np_", "%nameplates_").replace("%rel_np_", "%rel_nameplates_"), placeholder);
         }
@@ -100,13 +102,15 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
     public void unload() {
         this.refreshIntervals.clear();
         this.registeredPlaceholders.clear();
-        this.delayedInitTexts.clear();
         this.childrenText.clear();
+        this.delayedInitTexts.clear();
         this.nestedPlaceholders.clear();
+        this.fasterRefreshIntervals.clear();
         PlaceholderCounter.reset();
     }
 
     private void loadNestNameplatePlaceholders() {
+        if (!ConfigManager.nameplateModule()) return;
         PreParsedDynamicText nameTag = new PreParsedDynamicText(plugin.getNameplateManager().playerNameTag());
         Placeholder placeholder1 = this.registerPlayerPlaceholder("%np_tag-image%", (player -> {
             String equippedNameplate = player.equippedNameplate();
@@ -115,7 +119,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             if (nameplate == null) return "";
             String tag = nameTag.fastCreate(player).render(player);
             float advance = plugin.getAdvanceManager().getLineAdvance(tag);
-            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImage(advance, 1, 0));
+            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImage(advance, 0, 0));
         }));
         Placeholder placeholder2 = this.registerRelationalPlaceholder("%rel_np_tag-image%", (p1, p2) -> {
             String equippedNameplate = p1.equippedNameplate();
@@ -124,7 +128,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             if (nameplate == null) return "";
             String tag = nameTag.fastCreate(p1).render(p2);
             float advance = plugin.getAdvanceManager().getLineAdvance(tag);
-            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImage(advance, 1, 0));
+            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImage(advance, 0, 0));
         });
         Placeholder placeholder3 = this.registerPlayerPlaceholder("%np_tag-text%", (player -> nameTag.fastCreate(player).render(player)));
         Placeholder placeholder4 = this.registerRelationalPlaceholder("%rel_np_tag-text%", (p1, p2) -> nameTag.fastCreate(p1).render(p2));
@@ -135,8 +139,8 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             String tag = nameTag.fastCreate(player).render(player);
             if (nameplate == null) return tag;
             float advance = plugin.getAdvanceManager().getLineAdvance(tag);
-            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImagePrefix(advance, 1, 0))
-                    + tag + AdventureHelper.surroundWithNameplatesFont(nameplate.createImageSuffix(advance, 1, 0));
+            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImagePrefix(advance, 0, 0))
+                    + tag + AdventureHelper.surroundWithNameplatesFont(nameplate.createImageSuffix(advance, 0, 0));
         }));
         Placeholder placeholder6 = this.registerRelationalPlaceholder("%rel_np_tag%", (p1, p2) -> {
             String equippedNameplate = p1.equippedNameplate();
@@ -144,8 +148,8 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             if (nameplate == null) return p1.name();
             String tag = nameTag.fastCreate(p1).render(p2);
             float advance = plugin.getAdvanceManager().getLineAdvance(tag);
-            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImagePrefix(advance, 1, 0))
-                    + tag + AdventureHelper.surroundWithNameplatesFont(nameplate.createImageSuffix(advance, 1, 0));
+            return AdventureHelper.surroundWithNameplatesFont(nameplate.createImagePrefix(advance, 0, 0))
+                    + tag + AdventureHelper.surroundWithNameplatesFont(nameplate.createImageSuffix(advance, 0, 0));
         });
         List<PreParsedDynamicText> list = List.of(nameTag);
         childrenText.put(placeholder1, list);
@@ -161,22 +165,35 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
         this.registerPlayerPlaceholder("%player_x%", (player -> String.valueOf((int) Math.floor(player.position().x()))));
         this.registerPlayerPlaceholder("%player_y%", (player -> String.valueOf((int) Math.floor(player.position().y()))));
         this.registerPlayerPlaceholder("%player_z%", (player -> String.valueOf((int) Math.floor(player.position().z()))));
+        this.registerPlayerPlaceholder("%np_biome%", (player -> {
+            Vector3 vector3 = player.position();
+            return plugin.getPlatform().getBiome(player.world(), (int) Math.floor(vector3.x()), (int) Math.floor(vector3.y()), (int) Math.floor(vector3.z()));
+        }));
+        this.registerRelationalPlaceholder("%rel_np_biome%", (p1,p2) -> {
+            Vector3 vector3 = p1.position();
+            return plugin.getPlatform().getBiome(p1.world(), (int) Math.floor(vector3.x()), (int) Math.floor(vector3.y()), (int) Math.floor(vector3.z()));
+        });
         this.registerPlayerPlaceholder("%player_world%", (CNPlayer::world));
         this.registerPlayerPlaceholder("%player_remaining_air%", (player -> String.valueOf(player.remainingAir())));
         for (int i = -256; i <= 256; i++) {
             String characters = OffsetFont.createOffsets(i);
             this.registerPlayerPlaceholder("%np_offset_" + i + "%", (p) -> AdventureHelper.surroundWithNameplatesFont(characters));
         }
-        this.registerPlayerPlaceholder("%np_equipped_nameplate%", CNPlayer::equippedNameplate);
-        this.registerPlayerPlaceholder("%np_equipped_bubble%", CNPlayer::equippedBubble);
-        this.registerPlayerPlaceholder("%np_equipped_nameplate-name%", (player) -> {
-            Nameplate nameplate = plugin.getNameplateManager().nameplateById(player.equippedNameplate());
-            return Optional.ofNullable(nameplate).map(Nameplate::displayName).orElse("");
-        });
-        this.registerPlayerPlaceholder("%np_equipped_bubble-name%", (player) -> {
-            BubbleConfig bubble = plugin.getBubbleManager().bubbleConfigById(player.equippedBubble());
-            return Optional.ofNullable(bubble).map(BubbleConfig::displayName).orElse("");
-        });
+        if (ConfigManager.nameplateModule()) {
+            this.registerPlayerPlaceholder("%np_equipped_nameplate%", CNPlayer::equippedNameplate);
+            this.registerPlayerPlaceholder("%np_equipped_nameplate-name%", (player) -> {
+                Nameplate nameplate = plugin.getNameplateManager().nameplateById(player.equippedNameplate());
+                return Optional.ofNullable(nameplate).map(Nameplate::displayName).orElse("");
+            });
+        }
+        if (ConfigManager.bubbleModule()) {
+            this.registerPlayerPlaceholder("%np_equipped_bubble%", CNPlayer::equippedBubble);
+            this.registerPlayerPlaceholder("%np_equipped_bubble-name%", (player) -> {
+                BubbleConfig bubble = plugin.getBubbleManager().bubbleConfigById(player.equippedBubble());
+                return Optional.ofNullable(bubble).map(BubbleConfig::displayName).orElse("");
+            });
+        }
+
         this.registerSharedPlaceholder("%shared_np_is-latest%", () -> String.valueOf(plugin.isUpToDate()));
         this.registerPlayerPlaceholder("%np_is-latest%", (player) -> String.valueOf(plugin.isUpToDate()));
         for (int i = 1; i <= 20; i++) {
@@ -189,7 +206,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
         }
         for (int i = 1; i <= 20; i++) {
             int speed = i;
-            this.registerPlayerPlaceholder("%np_gradient_" + i + "%", (player) -> {
+            this.registerSharedPlaceholder("%shared_np_gradient_" + i + "%", () -> {
                 int currentTicks = MainTask.getTicks();
                 double progress = currentTicks * 0.01 * speed;
                 return String.format("%.2f", -1 + (progress % 2.0001));
@@ -204,6 +221,25 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             while (hours >= 12) hours -= 12;
             if (minutes < 10) return hours + ":0" + minutes + ap;
             else return hours + ":" + minutes + ap;
+        });
+        this.registerPlayerPlaceholder("%np_time_12%", (player) -> {
+            long time = player.playerTime() % 24_000;
+            String ap = time >= 6000 && time < 18000 ? " PM" : " AM";
+            int hours = (int) (time / 1000) ;
+            int minutes = (int) ((time - hours * 1000 ) * 0.06);
+            hours += 6;
+            while (hours >= 12) hours -= 12;
+            if (minutes < 10) return hours + ":0" + minutes + ap;
+            else return hours + ":" + minutes + ap;
+        });
+        this.registerPlayerPlaceholder("%np_time_24%", (player) -> {
+            long time = player.playerTime() % 24_000;
+            int hours = (int) (time / 1000);
+            int minutes = (int) ((time - hours * 1000) * 0.06);
+            hours += 6;
+            if (hours >= 24) hours -= 24;
+            String minuteStr = (minutes < 10) ? "0" + minutes : String.valueOf(minutes);
+            return hours + ":" + minuteStr;
         });
         this.registerPlayerPlaceholder("%np_actionbar%", (player) -> Optional.ofNullable(plugin.getActionBarManager().getExternalActionBar(player)).orElse(""));
         for (Image image : plugin.getImageManager().images()) {
@@ -291,20 +327,25 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
     }
 
     private void loadVanillaHud(Section section) {
+        if (!ConfigManager.imageModule()) return;
         for (Map.Entry<String, Object> entry : section.getStringRouteMappedValues(false).entrySet()) {
             String id = entry.getKey();
             if (entry.getValue() instanceof Section inner) {
                 boolean reverse = inner.getBoolean("reverse", true);
-                Image empty = requireNonNull(plugin.getImageManager().imageById(inner.getString("images.empty")), "image.empty should not be null");
-                Image half = requireNonNull(plugin.getImageManager().imageById(inner.getString("images.half")), "image.half should not be null");
-                Image full = requireNonNull(plugin.getImageManager().imageById(inner.getString("images.full")), "image.full should not be null");
-                String currentValue = section.getString("placeholder.value", "1");
-                String maxValue = section.getString("placeholder.max-value", currentValue);
+                Image empty = plugin.getImageManager().imageById(inner.getString("images.empty"));
+                Image half = plugin.getImageManager().imageById(inner.getString("images.half"));
+                Image full = plugin.getImageManager().imageById(inner.getString("images.full"));
+                if (empty == null || half == null || full == null) {
+                    plugin.getPluginLogger().warn("Empty/Half/Full image not found in vanilla hud");
+                    continue;
+                }
+                String currentValue = inner.getString("placeholder.value", "1");
+                String maxValue = inner.getString("placeholder.max-value", currentValue);
                 VanillaHud vanillaHud = new VanillaHud(empty, half, full, reverse, currentValue, maxValue);
                 List<PreParsedDynamicText> list = List.of(vanillaHud.getCurrent(), vanillaHud.getMax());
                 Placeholder placeholder1 = registerSharedPlaceholder("%shared_np_vanilla_" + id + "%", vanillaHud::create);
                 Placeholder placeholder2 = registerPlayerPlaceholder("%np_vanilla_" + id + "%", vanillaHud::create);
-                Placeholder placeholder3 = registerRelationalPlaceholder("%np_vanilla_" + id + "%", vanillaHud::create);
+                Placeholder placeholder3 = registerRelationalPlaceholder("%rel_np_vanilla_" + id + "%", vanillaHud::create);
                 childrenText.put(placeholder1, list);
                 childrenText.put(placeholder2, list);
                 childrenText.put(placeholder3, list);
@@ -320,7 +361,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                 PreParsedDynamicText defaultValue = new PreParsedDynamicText(inner.getString("default", ""));
                 ArrayList<PreParsedDynamicText> list = new ArrayList<>();
                 list.add(placeholderToSwitch);
-                this.delayedInitTexts.add(defaultValue);
+                delayedInitTexts.add(defaultValue);
                 Map<String, PreParsedDynamicText> valueMap = new HashMap<>();
                 Section results = inner.getSection("case");
                 if (results != null) {
@@ -328,7 +369,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         if (strEntry.getValue() instanceof String string) {
                             PreParsedDynamicText preParsedDynamicText = new PreParsedDynamicText(string);
                             valueMap.put(strEntry.getKey(), preParsedDynamicText);
-                            this.delayedInitTexts.add(preParsedDynamicText);
+                            delayedInitTexts.add(preParsedDynamicText);
                         }
                     }
                 }
@@ -340,13 +381,13 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                 Placeholder placeholder2 = registerPlayerPlaceholder("%np_switch_" + id + "%", (player) -> {
                     String value = placeholderToSwitch.fastCreate(player).render(player);
                     PreParsedDynamicText text = valueMap.getOrDefault(value, defaultValue);
-                    player.forceUpdate(text.placeholders(), Collections.emptySet());
+                    player.forceUpdatePlaceholders(text.placeholders(), Collections.emptySet());
                     return text.fastCreate(player).render(player);
                 });
                 Placeholder placeholder3 = registerRelationalPlaceholder("%rel_np_switch_" + id + "%", (p1, p2) -> {
                     String value = placeholderToSwitch.fastCreate(p1).render(p2);
                     PreParsedDynamicText text = valueMap.getOrDefault(value, defaultValue);
-                    p1.forceUpdate(text.placeholders(), Set.of(p2));
+                    p1.forceUpdatePlaceholders(text.placeholders(), Set.of(p2));
                     return text.fastCreate(p1).render(p2);
                 });
                 childrenText.put(placeholder1, list);
@@ -357,6 +398,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
     }
 
     private void loadBubbleTextSection(Section section) {
+        if (!ConfigManager.bubbleModule()) return;
         for (Map.Entry<String, Object> entry : section.getStringRouteMappedValues(false).entrySet()) {
             String id = entry.getKey();
             if (entry.getValue() instanceof Section inner) {
@@ -388,13 +430,14 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                     childrenText.put(placeholder8, list);
                     childrenText.put(placeholder9, list);
                 } else {
-                    plugin.getPluginLogger().warn("Nameplate [" + bbID + "] not exists");
+                    plugin.getPluginLogger().warn("Bubble [" + bbID + "] not exists");
                 }
             }
         }
     }
 
     private void loadNameplateTextSection(Section section) {
+        if (!ConfigManager.nameplateModule()) return;
         for (Map.Entry<String, Object> entry : section.getStringRouteMappedValues(false).entrySet()) {
             String id = entry.getKey();
             if (entry.getValue() instanceof Section inner) {
@@ -433,6 +476,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
     }
 
     private void loadBackgroundTextSection(Section section) {
+        if (!ConfigManager.backgroundModule()) return;
         for (Map.Entry<String, Object> entry : section.getStringRouteMappedValues(false).entrySet()) {
             String id = entry.getKey();
             if (entry.getValue() instanceof Section inner) {
@@ -481,10 +525,10 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         Requirement[] requirements = plugin.getRequirementManager().parseRequirements(inner.getSection("conditions"));
                         PreParsedDynamicText preParsedDynamicText = new PreParsedDynamicText(text);
                         orderedTexts.add(Pair.of(preParsedDynamicText, requirements));
-                        this.delayedInitTexts.add(preParsedDynamicText);
+                        delayedInitTexts.add(preParsedDynamicText);
                     }
                 }
-                this.registerSharedPlaceholder("%shared_np_conditional_" + id + "%", () -> {
+                Placeholder placeholder1 = this.registerSharedPlaceholder("%shared_np_conditional_" + id + "%", () -> {
                     outer:
                     for (Pair<PreParsedDynamicText, Requirement[]> orderedText : orderedTexts) {
                         for (Requirement requirement : orderedText.right()) {
@@ -496,28 +540,31 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                     }
                     return "";
                 });
-                this.registerPlayerPlaceholder("%np_conditional_" + id + "%", (player) -> {
+                Placeholder placeholder2 = this.registerPlayerPlaceholder("%np_conditional_" + id + "%", (player) -> {
                     for (Pair<PreParsedDynamicText, Requirement[]> orderedText : orderedTexts) {
                         if (!player.isMet(orderedText.right())) {
                             continue;
                         }
                         PreParsedDynamicText text = orderedText.left();
-                        player.forceUpdate(text.placeholders(), Collections.emptySet());
+                        player.forceUpdatePlaceholders(text.placeholders(), Collections.emptySet());
                         return text.fastCreate(player).render(player);
                     }
                     return "";
                 });
-                this.registerRelationalPlaceholder("%rel_np_conditional_" + id + "%", (p1, p2) -> {
+                Placeholder placeholder3 = this.registerRelationalPlaceholder("%rel_np_conditional_" + id + "%", (p1, p2) -> {
                     for (Pair<PreParsedDynamicText, Requirement[]> orderedText : orderedTexts) {
                         if (!p1.isMet(p2, orderedText.right())) {
                             continue;
                         }
                         PreParsedDynamicText text = orderedText.left();
-                        p1.forceUpdate(text.placeholders(), Set.of(p2));
+                        p1.forceUpdatePlaceholders(text.placeholders(), Set.of(p2));
                         return text.fastCreate(p1).render(p2);
                     }
                     return "";
                 });
+                childrenText.put(placeholder1, List.of());
+                childrenText.put(placeholder2, List.of());
+                childrenText.put(placeholder3, List.of());
             }
         }
     }
@@ -528,18 +575,18 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
             if (!player.isOnline()) continue;
             Set<Feature> featuresToNotifyUpdates = new HashSet<>();
             Map<Feature, List<CNPlayer>> relationalFeaturesToNotifyUpdates = new HashMap<>();
-            List<Placeholder> placeholdersToUpdate = player.activePlaceholdersToRefresh();
             List<RelationalPlaceholder> delayedPlaceholdersToUpdate = new ArrayList<>();
-            for (Placeholder placeholder : placeholdersToUpdate) {
+            for (Placeholder placeholder : player.activePlaceholdersToRefresh()) {
                 if (placeholder instanceof PlayerPlaceholder playerPlaceholder) {
-                    TickStampData<String> previous = player.getValue(placeholder);
+                    TimeStampData<String> previous = player.getValue(placeholder);
                     if (previous == null) {
                         String value = playerPlaceholder.request(player);
-                        player.setValue(placeholder, new TickStampData<>(value, MainTask.getTicks(), true));
+                        player.setValue(placeholder, new TimeStampData<>(value, MainTask.getTicks(), true));
                         featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                     } else {
-                        if (previous.ticks() == MainTask.getTicks()) {
+                        if (previous.ticks() > MainTask.getTicks() - getRefreshInterval(placeholder.countId())) {
                             if (previous.hasValueChanged()) {
+                                previous.resetChangedFlag();
                                 featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                             }
                             continue;
@@ -547,7 +594,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         String value = playerPlaceholder.request(player);
                         if (!previous.data().equals(value)) {
                             previous.data(value);
-                            previous.updateTicks(true);
+                            previous.updateTicks(false);
                             featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                         } else {
                             previous.updateTicks(false);
@@ -556,7 +603,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                 } else if (placeholder instanceof RelationalPlaceholder relationalPlaceholder) {
                     delayedPlaceholdersToUpdate.add(relationalPlaceholder);
                 } else if (placeholder instanceof SharedPlaceholder sharedPlaceholder) {
-                    TickStampData<String> previous = player.getValue(placeholder);
+                    TimeStampData<String> previous = player.getValue(placeholder);
                     if (previous == null) {
                         String value;
                         // if the shared placeholder has been updated by other players
@@ -565,12 +612,13 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         } else {
                             value = sharedPlaceholder.request();
                         }
-                        player.setValue(placeholder, new TickStampData<>(value, MainTask.getTicks(), true));
+                        player.setValue(placeholder, new TimeStampData<>(value, MainTask.getTicks(), true));
                         featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                     } else {
                         // The placeholder has been refreshed by other codes
-                        if (previous.ticks() == MainTask.getTicks()) {
+                        if (previous.ticks() > MainTask.getTicks() - getRefreshInterval(placeholder.countId())) {
                             if (previous.hasValueChanged()) {
+                                previous.resetChangedFlag();
                                 featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                             }
                             continue;
@@ -584,7 +632,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         }
                         if (!previous.data().equals(value)) {
                             previous.data(value);
-                            previous.updateTicks(true);
+                            previous.updateTicks(false);
                             featuresToNotifyUpdates.addAll(player.activeFeatures(placeholder));
                         } else {
                             previous.updateTicks(false);
@@ -595,10 +643,10 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
 
             for (RelationalPlaceholder placeholder : delayedPlaceholdersToUpdate) {
                 for (CNPlayer nearby : player.nearbyPlayers()) {
-                    TickStampData<String> previous = player.getRelationalValue(placeholder, nearby);
+                    TimeStampData<String> previous = player.getRelationalValue(placeholder, nearby);
                     if (previous == null) {
                         String value = placeholder.request(player, nearby);
-                        player.setRelationalValue(placeholder, nearby, new TickStampData<>(value, MainTask.getTicks(), true));
+                        player.setRelationalValue(placeholder, nearby, new TimeStampData<>(value, MainTask.getTicks(), true));
                         for (Feature feature : player.activeFeatures(placeholder)) {
                             // Filter features that will not be updated for all players
                             if (!featuresToNotifyUpdates.contains(feature)) {
@@ -607,8 +655,9 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                             }
                         }
                     } else {
-                        if (previous.ticks() == MainTask.getTicks()) {
+                        if (previous.ticks() > MainTask.getTicks() - getRefreshInterval(placeholder.countId())) {
                             if (previous.hasValueChanged()) {
+                                previous.resetChangedFlag();
                                 for (Feature feature : player.activeFeatures(placeholder)) {
                                     // Filter features that will not be updated for all players
                                     if (!featuresToNotifyUpdates.contains(feature)) {
@@ -622,7 +671,7 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
                         String value = placeholder.request(player, nearby);
                         if (!previous.data().equals(value)) {
                             previous.data(value);
-                            previous.updateTicks(true);
+                            previous.updateTicks(false);
                             for (Feature feature : player.activeFeatures(placeholder)) {
                                 // Filter features that will not be updated for all players
                                 if (!featuresToNotifyUpdates.contains(feature)) {
@@ -657,17 +706,26 @@ public class PlaceholderManagerImpl implements PlaceholderManager {
     }
 
     @Override
+    public int getRefreshInterval(int countId) {
+        return fasterRefreshIntervals.getOrDefault(countId, ConfigManager.defaultPlaceholderRefreshInterval());
+    }
+
+    @Override
     public int getRefreshInterval(String id) {
-        return refreshIntervals.getOrDefault(id, ConfigManager.defaultRefreshInterval());
+        return refreshIntervals.getOrDefault(id, ConfigManager.defaultPlaceholderRefreshInterval());
     }
 
     @Override
     public <T extends Placeholder> T registerPlaceholder(T placeholder) {
         Placeholder nested = nestedPlaceholders.get(placeholder.id());
         if (nested != null) {
-            placeholder.addChildren(nested.children());
+            for (Placeholder child : nested.children()) {
+                placeholder.addChild(child);
+                child.addParent(placeholder);
+            }
         }
         registeredPlaceholders.put(placeholder.id(), placeholder);
+        fasterRefreshIntervals.put(placeholder.countId(), placeholder.refreshInterval());
         return placeholder;
     }
 

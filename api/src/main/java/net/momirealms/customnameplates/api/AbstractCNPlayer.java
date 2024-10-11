@@ -18,7 +18,7 @@
 package net.momirealms.customnameplates.api;
 
 import net.momirealms.customnameplates.api.feature.Feature;
-import net.momirealms.customnameplates.api.feature.TickStampData;
+import net.momirealms.customnameplates.api.feature.TimeStampData;
 import net.momirealms.customnameplates.api.network.Tracker;
 import net.momirealms.customnameplates.api.placeholder.Placeholder;
 import net.momirealms.customnameplates.api.placeholder.PlayerPlaceholder;
@@ -39,16 +39,17 @@ public abstract class AbstractCNPlayer implements CNPlayer {
 
     private boolean isLoaded = false;
 
-    private boolean isPreviewing = false;
+    private boolean tempPreviewing = false;
+    private boolean toggleablePreviewing = false;
 
     private String equippedNameplate;
     private String equippedBubble;
 
-    private final Map<Integer, TickStampData<String>> cachedValues = new ConcurrentHashMap<>();
-    private final Map<Integer, WeakHashMap<CNPlayer, TickStampData<String>>> cachedRelationalValues = new ConcurrentHashMap<>();
+    private final Map<Integer, TimeStampData<String>> cachedValues = new ConcurrentHashMap<>();
+    private final Map<Integer, WeakHashMap<CNPlayer, TimeStampData<String>>> cachedRelationalValues = new ConcurrentHashMap<>();
 
-    private final Map<Requirement, TickStampData<Boolean>> cachedRequirements = new ConcurrentHashMap<>();
-    private final Map<Requirement, WeakHashMap<CNPlayer, TickStampData<Boolean>>> cachedRelationalRequirements = new ConcurrentHashMap<>();
+    private final Map<Requirement, TimeStampData<Boolean>> cachedRequirements = new ConcurrentHashMap<>();
+    private final Map<Requirement, WeakHashMap<CNPlayer, TimeStampData<Boolean>>> cachedRelationalRequirements = new ConcurrentHashMap<>();
 
     private final Set<Feature> activeFeatures = new CopyOnWriteArraySet<>();
     private final Map<Placeholder, Set<Feature>> placeholder2Features = new ConcurrentHashMap<>();
@@ -61,11 +62,6 @@ public abstract class AbstractCNPlayer implements CNPlayer {
         this.player = player;
     }
 
-    /**
-     * 将所有处于激活状态的变量统筹起来并返回一个更新任务
-     *
-     * @return 更新任务
-     */
     @Override
     public List<Placeholder> activePlaceholdersToRefresh() {
         Placeholder[] activePlaceholders = activePlaceholders();
@@ -73,29 +69,22 @@ public abstract class AbstractCNPlayer implements CNPlayer {
         for (Placeholder placeholder : activePlaceholders) {
             childrenFirstList(placeholder, placeholderWithChildren);
         }
-        List<Placeholder> uniquePlaceholderWithChildren = placeholderWithChildren.stream().distinct().toList();
-        List<Placeholder> placeholdersToUpdate = new ArrayList<>();
-        for (Placeholder placeholder : uniquePlaceholderWithChildren) {
-            int interval = placeholder.refreshInterval();
-            if (interval > 0 && MainTask.getTicks() % interval == 0) {
-                placeholdersToUpdate.add(placeholder);
-            }
-        }
-        return placeholdersToUpdate;
+        return placeholderWithChildren.stream().distinct().toList();
     }
 
     @Override
-    public void forceUpdate(Set<Placeholder> placeholders, Set<CNPlayer> others) {
+    public void forceUpdatePlaceholders(Set<Placeholder> placeholders, Set<CNPlayer> others) {
         if (placeholders.isEmpty()) return;
         List<Placeholder> placeholderWithChildren = new ArrayList<>();
         for (Placeholder placeholder : placeholders) {
             childrenFirstList(placeholder, placeholderWithChildren);
         }
+        placeholderWithChildren = placeholderWithChildren.stream().distinct().toList();
         for (Placeholder placeholder : placeholderWithChildren) {
              if (placeholder instanceof PlayerPlaceholder playerPlaceholder) {
-                TickStampData<String> value = getValue(placeholder);
+                TimeStampData<String> value = getValue(placeholder);
                 if (value == null) {
-                    value = new TickStampData<>(playerPlaceholder.request(this), MainTask.getTicks(), true);
+                    value = new TimeStampData<>(playerPlaceholder.request(this), MainTask.getTicks(), true);
                     setValue(placeholder, value);
                     continue;
                 }
@@ -106,9 +95,9 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                 }
             } else if (placeholder instanceof RelationalPlaceholder relational) {
                  for (CNPlayer player : others) {
-                     TickStampData<String> value = getRelationalValue(placeholder, player);
+                     TimeStampData<String> value = getRelationalValue(placeholder, player);
                      if (value == null) {
-                         value = new TickStampData<>(relational.request(this, player), MainTask.getTicks(), true);
+                         value = new TimeStampData<>(relational.request(this, player), MainTask.getTicks(), true);
                          setRelationalValue(placeholder, player, value);
                          continue;
                      }
@@ -119,7 +108,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                      }
                  }
              } else if (placeholder instanceof SharedPlaceholder sharedPlaceholder) {
-                TickStampData<String> value = getValue(placeholder);
+                TimeStampData<String> value = getValue(placeholder);
                 if (value == null) {
                     String latest;
                     if (MainTask.hasRequested(sharedPlaceholder.countId())) {
@@ -127,7 +116,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                     } else {
                         latest = sharedPlaceholder.request();
                     }
-                    value = new TickStampData<>(latest, MainTask.getTicks(), true);
+                    value = new TimeStampData<>(latest, MainTask.getTicks(), true);
                     setValue(placeholder, value);
                     continue;
                 }
@@ -156,6 +145,17 @@ public abstract class AbstractCNPlayer implements CNPlayer {
         }
     }
 
+    private void parentLastList(Placeholder placeholder, List<Placeholder> list) {
+        if (placeholder.parents().isEmpty()) {
+            list.add(placeholder);
+        } else {
+            list.add(placeholder);
+            for (Placeholder parent : placeholder.parents()) {
+                parentLastList(parent, list);
+            }
+        }
+    }
+
     public void reload() {
         cachedValues.clear();
         cachedRelationalValues.clear();
@@ -180,13 +180,22 @@ public abstract class AbstractCNPlayer implements CNPlayer {
         isLoaded = loaded;
     }
 
-    public void setPreviewing(boolean previewing) {
-        isPreviewing = previewing;
+    public void setTempPreviewing(boolean previewing) {
+        this.tempPreviewing = previewing;
     }
 
     @Override
-    public boolean isPreviewing() {
-        return isPreviewing;
+    public boolean isTempPreviewing() {
+        return tempPreviewing;
+    }
+
+    public void setToggleablePreviewing(boolean previewing) {
+        this.toggleablePreviewing = previewing;
+    }
+
+    @Override
+    public boolean isToggleablePreviewing() {
+        return toggleablePreviewing;
     }
 
     @Override
@@ -197,13 +206,10 @@ public abstract class AbstractCNPlayer implements CNPlayer {
     @Override
     public void addFeature(Feature feature) {
         activeFeatures.add(feature);
-        Set<Placeholder> allPlaceholdersUsedInFeature = feature.allPlaceholders();
-        feature2Placeholders.put(feature, allPlaceholdersUsedInFeature);
-        for (Placeholder placeholder : allPlaceholdersUsedInFeature) {
-            Set<Feature> featureSet = placeholder2Features.computeIfAbsent(placeholder, k -> {
-                forceUpdate(Set.of(placeholder), nearbyPlayers());
-                return new HashSet<>();
-            });
+        Set<Placeholder> allPlaceholders = feature.allPlaceholders();
+        feature2Placeholders.put(feature, allPlaceholders);
+        for (Placeholder placeholder : allPlaceholders) {
+            Set<Feature> featureSet = placeholder2Features.computeIfAbsent(placeholder, k -> new HashSet<>());
             featureSet.add(feature);
         }
     }
@@ -222,13 +228,13 @@ public abstract class AbstractCNPlayer implements CNPlayer {
     }
 
     @Override
-    public void setValue(Placeholder placeholder, TickStampData<String> value) {
+    public void setValue(Placeholder placeholder, TimeStampData<String> value) {
         cachedValues.put(placeholder.countId(), value);
     }
 
     @Override
     public boolean setValue(Placeholder placeholder, String value) {
-        TickStampData<String> previous = cachedValues.get(placeholder.countId());
+        TimeStampData<String> previous = cachedValues.get(placeholder.countId());
         int currentTicks = MainTask.getTicks();
         boolean changed = false;
         if (previous != null) {
@@ -243,22 +249,22 @@ public abstract class AbstractCNPlayer implements CNPlayer {
             }
         } else {
             changed= true;
-            previous = new TickStampData<>(value, currentTicks, true);
+            previous = new TimeStampData<>(value, currentTicks, true);
             cachedValues.put(placeholder.countId(), previous);
         }
         return changed;
     }
 
     @Override
-    public void setRelationalValue(Placeholder placeholder, CNPlayer another, TickStampData<String> value) {
-        WeakHashMap<CNPlayer, TickStampData<String>> map = cachedRelationalValues.computeIfAbsent(placeholder.countId(), k -> new WeakHashMap<>());
+    public void setRelationalValue(Placeholder placeholder, CNPlayer another, TimeStampData<String> value) {
+        WeakHashMap<CNPlayer, TimeStampData<String>> map = cachedRelationalValues.computeIfAbsent(placeholder.countId(), k -> new WeakHashMap<>());
         map.put(another, value);
     }
 
     @Override
     public boolean setRelationalValue(Placeholder placeholder, CNPlayer another, String value) {
-        WeakHashMap<CNPlayer, TickStampData<String>> map = cachedRelationalValues.computeIfAbsent(placeholder.countId(), k -> new WeakHashMap<>());
-        TickStampData<String> previous = map.get(another);
+        WeakHashMap<CNPlayer, TimeStampData<String>> map = cachedRelationalValues.computeIfAbsent(placeholder.countId(), k -> new WeakHashMap<>());
+        TimeStampData<String> previous = map.get(another);
         int currentTicks = MainTask.getTicks();
         boolean changed = false;
         if (previous != null) {
@@ -273,7 +279,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
             }
         } else {
             changed= true;
-            previous = new TickStampData<>(value, currentTicks, true);
+            previous = new TimeStampData<>(value, currentTicks, true);
             map.put(another, previous);
         }
         return changed;
@@ -281,26 +287,26 @@ public abstract class AbstractCNPlayer implements CNPlayer {
 
     @Override
     public @NotNull String getData(Placeholder placeholder) {
-        return Optional.ofNullable(cachedValues.get(placeholder.countId())).map(TickStampData::data).orElse(placeholder.id());
+        return Optional.ofNullable(cachedValues.get(placeholder.countId())).map(TimeStampData::data).orElse(placeholder.id());
     }
 
     @Override
-    public TickStampData<String> getValue(Placeholder placeholder) {
+    public TimeStampData<String> getValue(Placeholder placeholder) {
         return cachedValues.get(placeholder.countId());
     }
 
     @Override
     public @NotNull String getRelationalData(Placeholder placeholder, CNPlayer another) {
-        WeakHashMap<CNPlayer, TickStampData<String>> map = cachedRelationalValues.get(placeholder.countId());
+        WeakHashMap<CNPlayer, TimeStampData<String>> map = cachedRelationalValues.get(placeholder.countId());
         if (map == null) {
             return placeholder.id();
         }
-        return Optional.ofNullable(map.get(another)).map(TickStampData::data).orElse(placeholder.id());
+        return Optional.ofNullable(map.get(another)).map(TimeStampData::data).orElse(placeholder.id());
     }
 
     @Override
-    public TickStampData<String> getRelationalValue(Placeholder placeholder, CNPlayer another) {
-        WeakHashMap<CNPlayer, TickStampData<String>> map = cachedRelationalValues.get(placeholder.countId());
+    public TimeStampData<String> getRelationalValue(Placeholder placeholder, CNPlayer another) {
+        WeakHashMap<CNPlayer, TimeStampData<String>> map = cachedRelationalValues.get(placeholder.countId());
         if (map == null) {
             return null;
         }
@@ -320,7 +326,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
     public boolean isMet(Requirement[] requirements) {
         int currentTicks = MainTask.getTicks();
         for (Requirement requirement : requirements) {
-            TickStampData<Boolean> data = cachedRequirements.get(requirement);
+            TimeStampData<Boolean> data = cachedRequirements.get(requirement);
             if (data != null) {
                 if (data.ticks() + requirement.refreshInterval() > currentTicks) {
                     if (!data.data()) {
@@ -336,7 +342,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                 }
             } else {
                 boolean satisfied = requirement.isSatisfied(this, this);
-                data = new TickStampData<>(satisfied, currentTicks, true);
+                data = new TimeStampData<>(satisfied, currentTicks, true);
                 cachedRequirements.put(requirement, data);
                 if (!satisfied) {
                     return false;
@@ -350,8 +356,8 @@ public abstract class AbstractCNPlayer implements CNPlayer {
     public boolean isMet(CNPlayer another, Requirement[] requirements) {
         int currentTicks = MainTask.getTicks();
         for (Requirement requirement : requirements) {
-            WeakHashMap<CNPlayer, TickStampData<Boolean>> innerMap = cachedRelationalRequirements.computeIfAbsent(requirement, k -> new WeakHashMap<>());
-            TickStampData<Boolean> data = innerMap.get(another);
+            WeakHashMap<CNPlayer, TimeStampData<Boolean>> innerMap = cachedRelationalRequirements.computeIfAbsent(requirement, k -> new WeakHashMap<>());
+            TimeStampData<Boolean> data = innerMap.get(another);
             if (data != null) {
                 if (data.ticks() + requirement.refreshInterval() > currentTicks) {
                     if (!data.data()) {
@@ -367,7 +373,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                 }
             } else {
                 boolean satisfied = requirement.isSatisfied(this, another);
-                data = new TickStampData<>(satisfied, currentTicks, true);
+                data = new TimeStampData<>(satisfied, currentTicks, true);
                 innerMap.put(another, data);
                 if (!satisfied) {
                     return false;
@@ -379,7 +385,11 @@ public abstract class AbstractCNPlayer implements CNPlayer {
 
     @Override
     public Tracker addPlayerToTracker(CNPlayer another) {
-        Tracker tracker = new Tracker(another);
+        Tracker tracker = trackers.get(another);
+        if (tracker != null) {
+            return tracker;
+        }
+        tracker = new Tracker(another);
         trackers.put(another, tracker);
         for (Placeholder placeholder : activePlaceholders()) {
             if (placeholder instanceof RelationalPlaceholder relationalPlaceholder) {
@@ -455,7 +465,6 @@ public abstract class AbstractCNPlayer implements CNPlayer {
         if (!isLoaded()) return false;
         if (!equippedNameplate.equals(this.equippedNameplate)) {
             this.equippedNameplate = equippedNameplate;
-            // TODO 更新变量
         }
         return true;
     }
@@ -466,6 +475,7 @@ public abstract class AbstractCNPlayer implements CNPlayer {
                 .uuid(uuid())
                 .nameplate(equippedNameplate())
                 .bubble(equippedBubble())
+                .previewTags(isToggleablePreviewing())
                 .build(), plugin.getScheduler().async());
     }
 

@@ -22,12 +22,8 @@ import net.momirealms.customnameplates.api.helper.VersionHelper;
 import net.momirealms.customnameplates.common.util.ReflectionUtils;
 import sun.misc.Unsafe;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.lang.reflect.*;
+import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
@@ -350,6 +346,19 @@ public class Reflections {
             BukkitReflectionUtils.assembleMCClass("server.network.PlayerConnection")
     ));
 
+    public static final Class<?> clazz$NetworkManager = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.Connection"),
+                    BukkitReflectionUtils.assembleMCClass("network.NetworkManager")
+            )
+    );
+
+    public static final Class<?> clazz$PacketSendListener = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.PacketSendListener")
+            )
+    );
+
     public static final Class<?> clazz$CraftPlayer = requireNonNull(ReflectionUtils.getClazz(
             BukkitReflectionUtils.assembleCBClass("entity.CraftPlayer")
     ));
@@ -359,18 +368,11 @@ public class Reflections {
     );
 
     public static final Field field$PlayerConnection = requireNonNull(
-            ReflectionUtils.getDeclaredField(clazz$ServerPlayer, clazz$PlayerConnection, 0)
+            ReflectionUtils.getInstanceDeclaredField(clazz$ServerPlayer, clazz$PlayerConnection, 0)
     );
 
     public static final Method method$SendPacket = requireNonNull(
             ReflectionUtils.getMethods(clazz$PlayerConnection, void.class, clazz$Packet).get(0)
-    );
-
-    public static final Class<?> clazz$NetworkManager = requireNonNull(
-            ReflectionUtils.getClazz(
-                    BukkitReflectionUtils.assembleMCClass("network.Connection"),
-                    BukkitReflectionUtils.assembleMCClass("network.NetworkManager")
-            )
     );
 
     public static final Field field$NetworkManager = requireNonNull(
@@ -739,6 +741,286 @@ public class Reflections {
     public static final Field field$AttributeModifier$amount = requireNonNull(
             ReflectionUtils.getDeclaredField(
                     clazz$AttributeModifier, double.class, 0
+            )
+    );
+
+    public static final Class<?> clazz$ClientboundGameEventPacket = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundGameEventPacket"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.PacketPlayOutGameStateChange")
+            )
+    );
+
+    public static final Class<?> clazz$ClientboundGameEventPacket$Type = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundGameEventPacket$Type"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.PacketPlayOutGameStateChange$a")
+            )
+    );
+
+    public static final Field field$ClientboundGameEventPacket$event = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundGameEventPacket, clazz$ClientboundGameEventPacket$Type, 0
+            )
+    );
+
+    public static final Field field$ClientboundGameEventPacket$param = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundGameEventPacket, float.class, 0
+            )
+    );
+
+    public static final Field field$ClientboundGameEventPacket$Type$id = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundGameEventPacket$Type, int.class, 0
+            )
+    );
+
+    public static final Class<?> clazz$ClientboundPlayerInfoUpdatePacket = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundPlayerInfoUpdatePacket")
+            )
+    );
+
+    public static final Field field$ClientboundPlayerInfoUpdatePacket$actions = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundPlayerInfoUpdatePacket, EnumSet.class, 0
+            )
+    );
+
+    public static final Field field$ClientboundPlayerInfoUpdatePacket$entries = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundPlayerInfoUpdatePacket, List.class, 0
+            )
+    );
+
+    public static final Class<?> clazz$ClientboundPlayerInfoUpdatePacket$Action = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundPlayerInfoUpdatePacket$Action"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundPlayerInfoUpdatePacket$a")
+            )
+    );
+
+    public static final Enum<?> enum$ClientboundPlayerInfoUpdatePacket$Action$UPDATE_GAME_MODE;
+
+
+    static {
+        Enum<?> updateGameMode;
+        try {
+            updateGameMode = Enum.valueOf((Class<Enum>) clazz$ClientboundPlayerInfoUpdatePacket$Action, "UPDATE_GAME_MODE");
+        } catch (Exception e) {
+            updateGameMode = Enum.valueOf((Class<Enum>) clazz$ClientboundPlayerInfoUpdatePacket$Action, "c");
+        }
+        enum$ClientboundPlayerInfoUpdatePacket$Action$UPDATE_GAME_MODE = updateGameMode;
+    }
+
+    public static final Class<?> clazz$ClientboundPlayerInfoUpdatePacket$Entry = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundPlayerInfoUpdatePacket$Entry"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundPlayerInfoUpdatePacket$b")
+            )
+    );
+
+    public static final Class<?> clazz$GameType = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("world.level.GameType"),
+                    BukkitReflectionUtils.assembleMCClass("world.level.EnumGamemode")
+            )
+    );
+
+    public static final Field field$ClientboundPlayerInfoUpdatePacket$Entry$gameMode = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundPlayerInfoUpdatePacket$Entry, clazz$GameType, 0
+            )
+    );
+
+    public static final Field field$ClientboundPlayerInfoUpdatePacket$Entry$profileId = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundPlayerInfoUpdatePacket$Entry, UUID.class, 0
+            )
+    );
+
+    public static final Method method$GameType$getId = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$GameType, new String[] { "getId", "a" }
+            )
+    );
+
+    public static final Class<?> clazz$Biome = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("world.level.biome.Biome"),
+                    BukkitReflectionUtils.assembleMCClass("world.level.biome.BiomeBase")
+            )
+    );
+
+    public static final Class<?> clazz$CraftWorld = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleCBClass("CraftWorld")
+            )
+    );
+
+    public static final Class<?> clazz$ServerLevel = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("server.level.ServerLevel"),
+                    BukkitReflectionUtils.assembleMCClass("server.level.WorldServer")
+            )
+    );
+
+    public static final Field field$CraftWorld$ServerLevel = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$CraftWorld, clazz$ServerLevel, 0
+            )
+    );
+
+    public static final Method method$ServerLevel$getNoiseBiome = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$ServerLevel, clazz$Holder, int.class, int.class, int.class
+            )
+    );
+
+    public static final Class<?> clazz$ResourceLocation = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("resources.ResourceLocation"),
+                    BukkitReflectionUtils.assembleMCClass("resources.MinecraftKey")
+            )
+    );
+
+    public static final Class<?> clazz$ResourceKey = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("resources.ResourceKey")
+            )
+    );
+
+    public static final Class<?> clazz$MinecraftServer = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("server.MinecraftServer")
+            )
+    );
+
+    public static final Method method$MinecraftServer$getServer = requireNonNull(
+            ReflectionUtils.getMethod(clazz$MinecraftServer, new String[] { "getServer" })
+    );
+
+    public static final Class<?> clazz$LayeredRegistryAccess = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("core.LayeredRegistryAccess")
+            )
+    );
+
+    public static final Field field$MinecraftServer$registries = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$MinecraftServer, clazz$LayeredRegistryAccess, 0
+            )
+    );
+
+    public static final Class<?> clazz$RegistryAccess$Frozen = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("core.RegistryAccess$Frozen"),
+                    BukkitReflectionUtils.assembleMCClass("core.IRegistryCustom$Dimension")
+            )
+    );
+
+    public static final Class<?> clazz$RegistryAccess = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("core.RegistryAccess"),
+                    BukkitReflectionUtils.assembleMCClass("core.IRegistryCustom")
+            )
+    );
+
+    public static final Field field$LayeredRegistryAccess$composite = requireNonNull(
+            ReflectionUtils.getDeclaredField(
+                    clazz$LayeredRegistryAccess, clazz$RegistryAccess$Frozen, 0
+            )
+    );
+
+    public static final Class<?> clazz$Registry = requireNonNull(
+            requireNonNull(ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("core.WritableRegistry"),
+                    BukkitReflectionUtils.assembleMCClass("core.IRegistryWritable")
+            )).getInterfaces()[0]
+    );
+
+    public static final Method method$RegistryAccess$registryOrThrow = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$RegistryAccess, clazz$Registry, clazz$ResourceKey
+            )
+    );
+
+    public static final Class<?> clazz$Registries = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("core.registries.Registries")
+            )
+    );
+
+    public static final Method method$Registry$getKey = requireNonNull(
+            ReflectionUtils.getMethod(clazz$Registry, clazz$ResourceLocation, Object.class)
+    );
+
+    public static final Object instance$BiomeRegistry;
+
+    static {
+        Field[] fields = clazz$Registries.getDeclaredFields();
+        try {
+            Object field$Registries$Biome = null;
+            for (Field field : fields) {
+                Type fieldType = field.getGenericType();
+                if (fieldType instanceof ParameterizedType paramType) {
+                    if (paramType.getRawType() == clazz$ResourceKey) {
+                        Type[] actualTypeArguments = paramType.getActualTypeArguments();
+                        if (actualTypeArguments.length == 1 && actualTypeArguments[0] instanceof ParameterizedType registryType) {
+                            if (registryType.getActualTypeArguments()[0] == clazz$Biome) {
+                                field$Registries$Biome = field.get(null);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            requireNonNull(field$Registries$Biome);
+            Object server = method$MinecraftServer$getServer.invoke(null);
+            Object registries = field$MinecraftServer$registries.get(server);
+            Object compositeAccess = field$LayeredRegistryAccess$composite.get(registries);
+            instance$BiomeRegistry = method$RegistryAccess$registryOrThrow.invoke(compositeAccess, field$Registries$Biome);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static final Class<?> clazz$ClientboundSetPlayerTeamPacket = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundSetPlayerTeamPacket"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.PacketPlayOutScoreboardTeam")
+            )
+    );
+
+    public static final Field field$ClientboundSetPlayerTeamPacket$method = requireNonNull(
+            ReflectionUtils.getInstanceDeclaredField(
+                    clazz$ClientboundSetPlayerTeamPacket, int.class, 0
+            )
+    );
+
+    public static final Field field$ClientboundSetPlayerTeamPacket$players = requireNonNull(
+            ReflectionUtils.getInstanceDeclaredField(
+                    clazz$ClientboundSetPlayerTeamPacket, Collection.class, 0
+            )
+    );
+
+    public static final Field field$ClientboundSetPlayerTeamPacket$parameters = requireNonNull(
+            ReflectionUtils.getInstanceDeclaredField(
+                    clazz$ClientboundSetPlayerTeamPacket, Optional.class, 0
+            )
+    );
+
+    public static final Class<?> clazz$ClientboundSetPlayerTeamPacket$Parameters = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.ClientboundSetPlayerTeamPacket$Parameters"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.game.PacketPlayOutScoreboardTeam$b")
+            )
+    );
+
+    public static final Field field$ClientboundSetPlayerTeamPacket$Parameters$nametagVisibility = requireNonNull(
+            ReflectionUtils.getInstanceDeclaredField(
+                    clazz$ClientboundSetPlayerTeamPacket$Parameters, String.class, 0
             )
     );
 }

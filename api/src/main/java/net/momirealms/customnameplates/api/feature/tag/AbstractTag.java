@@ -95,7 +95,8 @@ public abstract class AbstractTag implements Tag {
     @Override
     public void hide(CNPlayer viewer) {
         if (!isShown()) return;
-        viewers.remove(viewer);
+        boolean removed = viewers.remove(viewer);
+        if (!removed) return;
         resetViewerArray();
         owner.untrackPassengers(viewer, entityID);
         Object packet = CustomNameplates.getInstance().getPlatform().removeEntityPacket(entityID);
@@ -118,15 +119,15 @@ public abstract class AbstractTag implements Tag {
     }
 
     @Override
-    public void onPlayerCrouching(boolean isCrouching) {
+    public void darkTag(boolean dark) {
         for (CNPlayer viewer : viewerArray) {
-            onPlayerCrouching(viewer, isCrouching);
+            darkTag(viewer, dark);
         }
     }
 
     @Override
-    public void onPlayerCrouching(CNPlayer viewer, boolean isCrouching) {
-        Consumer<List<Object>> modifiers = CustomNameplates.getInstance().getPlatform().createOpacityModifier(isCrouching ? 64 : opacity());
+    public void darkTag(CNPlayer viewer, boolean dark) {
+        Consumer<List<Object>> modifiers = CustomNameplates.getInstance().getPlatform().createOpacityModifier(dark ? 64 : opacity());
         Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(modifiers));
         CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
     }
@@ -149,12 +150,17 @@ public abstract class AbstractTag implements Tag {
     @Override
     public void updateTranslation() {
         for (CNPlayer player : viewerArray) {
-            Tracker tracker = owner.getTracker(player);
-            if (tracker != null) {
-                Consumer<List<Object>> modifier = CustomNameplates.getInstance().getPlatform().createTranslationModifier(translation(player).multiply(tracker.getScale()));
-                Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(modifier));
-                CustomNameplates.getInstance().getPacketSender().sendPacket(player, packet);
-            }
+            updateTranslation(player);
+        }
+    }
+
+    @Override
+    public void updateTranslation(CNPlayer viewer) {
+        Tracker tracker = owner.getTracker(viewer);
+        if (tracker != null) {
+            Consumer<List<Object>> modifier = CustomNameplates.getInstance().getPlatform().createTranslationModifier(translation(viewer).multiply(tracker.getScale()));
+            Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(modifier));
+            CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
         }
     }
 

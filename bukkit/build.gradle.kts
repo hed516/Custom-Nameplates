@@ -46,13 +46,14 @@ dependencies {
 
 tasks {
     shadowJar {
-        archiveFileName = "CustomNameplates-Bukkit-${rootProject.properties["project_version"]}.jar"
+        archiveFileName = "CustomNameplates-${rootProject.properties["project_version"]}.jar"
         destinationDirectory.set(file("$rootDir/target"))
         relocate("net.kyori", "net.momirealms.customnameplates.libraries")
         relocate("org.incendo", "net.momirealms.customnameplates.libraries")
         relocate("dev.dejvokep", "net.momirealms.customnameplates.libraries")
         relocate("net.bytebuddy", "net.momirealms.customnameplates.libraries.bytebuddy")
         relocate("org.apache.commons.pool2", "net.momirealms.customnameplates.libraries.commonspool2")
+        relocate("org.apache.commons.io", "net.momirealms.customnameplates.libraries.commons.io")
         relocate("com.mysql", "net.momirealms.customnameplates.libraries.mysql")
         relocate("org.mariadb", "net.momirealms.customnameplates.libraries.mariadb")
         relocate("com.zaxxer.hikari", "net.momirealms.customnameplates.libraries.hikari")

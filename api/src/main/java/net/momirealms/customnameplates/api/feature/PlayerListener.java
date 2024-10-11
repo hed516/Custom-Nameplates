@@ -15,16 +15,33 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.momirealms.customnameplates.api.storage;
+package net.momirealms.customnameplates.api.feature;
 
-public enum StorageType {
-	JSON,
-	YAML,
-	H2,
-	SQLITE,
-	MYSQL,
-	MARIADB,
-    MONGODB,
-	Redis,
-	NONE
+import net.momirealms.customnameplates.api.CNPlayer;
+
+/**
+ * Listener for handling player actions
+ */
+public interface PlayerListener {
+
+    /**
+     * Called when a player changes the world
+     *
+     * @param player the player who changes the world
+     */
+    void onChangeWorld(CNPlayer player);
+
+    /**
+     * Called when a player respawns
+     *
+     * @param player the player who respawns
+     */
+    void onRespawn(CNPlayer player);
+
+    /**
+     * Called when a player teleports
+     *
+     * @param player the player who respawns
+     */
+    void onTeleport(CNPlayer player);
 }

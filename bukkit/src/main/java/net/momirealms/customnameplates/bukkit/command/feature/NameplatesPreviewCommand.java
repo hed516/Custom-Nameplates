@@ -44,7 +44,7 @@ public class NameplatesPreviewCommand extends BukkitCommandFeature<CommandSender
         return builder
                 .senderType(Player.class)
                 .handler(context -> {
-                    if (!ConfigManager.nameplateModule()) return;
+                    if (!ConfigManager.nametagModule()) return;
                     CNPlayer player = plugin.getPlayer(context.sender().getUniqueId());
                     if (player == null) {
                         throw new RuntimeException("Player should not be null");
@@ -52,17 +52,17 @@ public class NameplatesPreviewCommand extends BukkitCommandFeature<CommandSender
                     if (plugin.getUnlimitedTagManager().isAlwaysShow()) {
                         return;
                     }
-                    if (player.isPreviewing()) {
+                    if (player.isTempPreviewing()) {
                         handleFeedback(context, MessageConstants.COMMAND_NAMEPLATES_PREVIEW_FAILURE_COOLDOWN);
                         return;
                     }
-                    plugin.getUnlimitedTagManager().setPreviewing(player, true);
+                    plugin.getUnlimitedTagManager().setTempPreviewing(player, true);
 
                     SchedulerTask task = plugin.getScheduler().asyncLater(() -> {
                         if (!player.isOnline()) {
                             return;
                         }
-                        plugin.getUnlimitedTagManager().setPreviewing(player, false);
+                        plugin.getUnlimitedTagManager().setTempPreviewing(player, false);
                     }, plugin.getUnlimitedTagManager().previewDuration(), TimeUnit.SECONDS);
 
                     PreviewTasks.delayedTasks.put(player.uuid(), task);

@@ -19,6 +19,7 @@ package net.momirealms.customnameplates.backend.feature.nameplate;
 
 import dev.dejvokep.boostedyaml.YamlDocument;
 import net.momirealms.customnameplates.api.CNPlayer;
+import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.feature.ConfiguredCharacter;
 import net.momirealms.customnameplates.api.feature.nameplate.Nameplate;
@@ -48,6 +49,7 @@ public class NameplateManagerImpl implements NameplateManager {
     @Override
     public void load() {
         this.loadConfig();
+        if (!ConfigManager.nameplateModule()) return;
         this.loadConfigs();
     }
 

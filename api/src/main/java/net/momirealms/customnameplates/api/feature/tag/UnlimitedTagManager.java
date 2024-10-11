@@ -57,7 +57,15 @@ public interface UnlimitedTagManager extends Reloadable {
      * @param player  the player to update
      * @param preview true to enable preview mode, false to disable
      */
-    void setPreviewing(CNPlayer player, boolean preview);
+    void setTempPreviewing(CNPlayer player, boolean preview);
+
+    /**
+     * Sets whether a player can always see their tags
+     *
+     * @param player  the player to update
+     * @param preview true to enable preview mode, false to disable
+     */
+    void togglePreviewing(CNPlayer player, boolean preview);
 
     /**
      * Returns the duration (in ticks) for which a tag preview is shown.
@@ -112,4 +120,14 @@ public interface UnlimitedTagManager extends Reloadable {
      */
     @ApiStatus.Internal
     void onPlayerAttributeSet(CNPlayer owner, CNPlayer viewer, double scale);
+
+    /**
+     * Internal method for updating a player's game mode
+     *
+     * @param owner   the player who owns the tags
+     * @param viewer  the player viewing the tags
+     * @param isSpectator true if the player is a spectator, false otherwise
+     */
+    @ApiStatus.Internal
+    void onPlayerGameModeChange(CNPlayer owner, CNPlayer viewer, boolean isSpectator);
 }

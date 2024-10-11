@@ -49,8 +49,7 @@ public class BukkitNetworkManager implements PacketSender, PipelineInjector {
     }
 
     @Override
-    public void sendPacket(@NotNull CNPlayer player, final Object packet) {
-        if (!player.isOnline()) return;
+    public void sendPacket(@NotNull CNPlayer player, Object packet) {
         try {
             Reflections.method$SendPacket.invoke(
                     Reflections.field$PlayerConnection.get(

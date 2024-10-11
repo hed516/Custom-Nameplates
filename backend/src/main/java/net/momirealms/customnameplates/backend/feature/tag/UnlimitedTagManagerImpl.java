@@ -19,12 +19,21 @@ package net.momirealms.customnameplates.backend.feature.tag;
 
 import dev.dejvokep.boostedyaml.YamlDocument;
 import dev.dejvokep.boostedyaml.block.implementation.Section;
+import dev.dejvokep.boostedyaml.dvs.versioning.BasicVersioning;
+import dev.dejvokep.boostedyaml.libs.org.snakeyaml.engine.v2.common.ScalarStyle;
+import dev.dejvokep.boostedyaml.libs.org.snakeyaml.engine.v2.nodes.Tag;
+import dev.dejvokep.boostedyaml.settings.dumper.DumperSettings;
+import dev.dejvokep.boostedyaml.settings.general.GeneralSettings;
+import dev.dejvokep.boostedyaml.settings.loader.LoaderSettings;
+import dev.dejvokep.boostedyaml.settings.updater.UpdaterSettings;
+import dev.dejvokep.boostedyaml.utils.format.NodeRole;
 import net.momirealms.customnameplates.api.AbstractCNPlayer;
 import net.momirealms.customnameplates.api.CNPlayer;
 import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.feature.CarouselText;
 import net.momirealms.customnameplates.api.feature.JoinQuitListener;
+import net.momirealms.customnameplates.api.feature.PlayerListener;
 import net.momirealms.customnameplates.api.feature.tag.NameTagConfig;
 import net.momirealms.customnameplates.api.feature.tag.TagRenderer;
 import net.momirealms.customnameplates.api.feature.tag.UnlimitedTagManager;
@@ -36,12 +45,14 @@ import net.momirealms.customnameplates.api.util.ConfigUtils;
 import net.momirealms.customnameplates.api.util.Vector3;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
-public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitListener {
+public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitListener, PlayerListener {
 
     private final CustomNameplates plugin;
     private final LinkedHashMap<String, NameTagConfig> configs = new LinkedHashMap<>();
@@ -55,21 +66,71 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitLis
     }
 
     @Override
-    public void setPreviewing(CNPlayer player, boolean preview) {
-        boolean isPreviewing = player.isPreviewing();
+    public void setTempPreviewing(CNPlayer player, boolean preview) {
+        boolean isPreviewing = player.isTempPreviewing();
         if (isPreviewing) {
             if (preview) return;
-            plugin.getUnlimitedTagManager().onRemovePlayer(player, player);
+            onRemovePlayer(player, player);
             player.removePlayerFromTracker(player);
-            ((AbstractCNPlayer) player).setPreviewing(false);
+            ((AbstractCNPlayer) player).setTempPreviewing(false);
         } else {
             if (!preview) return;
             Tracker tracker = player.addPlayerToTracker(player);
             tracker.setScale(player.scale());
             tracker.setCrouching(player.isCrouching());
-            plugin.getUnlimitedTagManager().onAddPlayer(player, player);
-            ((AbstractCNPlayer) player).setPreviewing(true);
+            tracker.setSpectator(player.isSpectator());
+            onAddPlayer(player, player);
+            ((AbstractCNPlayer) player).setTempPreviewing(true);
         }
+    }
+
+    @Override
+    public void togglePreviewing(CNPlayer player, boolean preview) {
+        boolean isPreviewing = player.isToggleablePreviewing();
+        if (isPreviewing) {
+            if (preview) return;
+            onRemovePlayer(player, player);
+            player.removePlayerFromTracker(player);
+            ((AbstractCNPlayer) player).setToggleablePreviewing(false);
+        } else {
+            if (!preview) return;
+            Tracker tracker = player.addPlayerToTracker(player);
+            tracker.setScale(player.scale());
+            tracker.setCrouching(player.isCrouching());
+            tracker.setSpectator(player.isSpectator());
+            onAddPlayer(player, player);
+            ((AbstractCNPlayer) player).setToggleablePreviewing(true);
+        }
+    }
+
+    @Override
+    public void onChangeWorld(CNPlayer player) {
+        plugin.getScheduler().async().execute(() -> {
+            if (player.isOnline() && (player.isTempPreviewing() || player.isToggleablePreviewing())) {
+                onRemovePlayer(player, player);
+                onAddPlayer(player, player);
+            }
+        });
+    }
+
+    @Override
+    public void onRespawn(CNPlayer player) {
+        plugin.getScheduler().asyncLater(() -> {
+            if (player.isOnline() && (player.isTempPreviewing() || player.isToggleablePreviewing())) {
+                onRemovePlayer(player, player);
+                onAddPlayer(player, player);
+            }
+        }, 50, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void onTeleport(CNPlayer player) {
+        plugin.getScheduler().asyncLater(() -> {
+            if (player.isOnline() && (player.isTempPreviewing() || player.isToggleablePreviewing())) {
+                onRemovePlayer(player, player);
+                onAddPlayer(player, player);
+            }
+        }, 50, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -85,7 +146,9 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitLis
         if (previous != null) {
             previous.destroy();
         }
-        setPreviewing(player, isAlwaysShow());
+        if (isAlwaysShow()) {
+            setTempPreviewing(player, isAlwaysShow());
+        }
     }
 
     @Override
@@ -98,7 +161,6 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitLis
 
     @Override
     public void load() {
-        if (!ConfigManager.nameplateModule()) return;
         this.loadConfig();
         this.resetArray();
         for (CNPlayer online : plugin.getOnlinePlayers()) {
@@ -179,13 +241,48 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitLis
         }
     }
 
+    @Override
+    public void onPlayerGameModeChange(CNPlayer owner, CNPlayer viewer, boolean isSpectator) {
+        TagRendererImpl controller = tagRenderers.get(owner.uuid());
+        if (controller != null) {
+            controller.handleGameModeChange(viewer, isSpectator);
+        }
+    }
+
     private void loadConfig() {
-        plugin.getConfigManager().saveResource("configs" + File.separator + "nameplate.yml");
-        YamlDocument document = plugin.getConfigManager().loadData(new File(plugin.getDataDirectory().toFile(), "configs" + File.separator + "nameplate.yml"));
+        YamlDocument document = plugin.getConfigManager().loadConfig("configs" + File.separator + "nameplate.yml",
+                GeneralSettings.builder()
+                        .setRouteSeparator('.')
+                        .setUseDefaults(false)
+                        .build(),
+                LoaderSettings
+                        .builder()
+                        .setAutoUpdate(true)
+                        .build(),
+                DumperSettings.builder()
+                        .setEscapeUnprintable(false)
+                        .setScalarFormatter((tag, value, role, def) -> {
+                            if (role == NodeRole.KEY) {
+                                return ScalarStyle.PLAIN;
+                            } else {
+                                return tag == Tag.STR ? ScalarStyle.DOUBLE_QUOTED : ScalarStyle.PLAIN;
+                            }
+                        })
+                        .build(),
+                UpdaterSettings
+                        .builder()
+                        .setVersioning(new BasicVersioning("config-version"))
+                        .addIgnoredRoute(ConfigManager.configVersion(), "unlimited", '.')
+                        .build());
+        try {
+            document.save(plugin.getConfigManager().resolveConfig("configs" + File.separator + "nameplate.yml").toFile());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         previewDuration = document.getInt("preview-duration", 5);
         alwaysShow = document.getBoolean("always-show", false);
         Section unlimitedSection = document.getSection("unlimited");
-        if (unlimitedSection == null) return;
+        if (!ConfigManager.nametagModule() || unlimitedSection == null) return;
         for (Map.Entry<String, Object> entry : unlimitedSection.getStringRouteMappedValues(false).entrySet()) {
             if (!(entry.getValue() instanceof Section section))
                 return;
@@ -208,6 +305,7 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, JoinQuitLis
                             .useDefaultBackgroundColor(section.getBoolean("use-default-background-color", false))
                             .backgroundColor(ConfigUtils.argb(section.getString("background-color", "64,0,0,0")))
                             .affectedByCrouching(section.getBoolean("affected-by-crouching", true))
+                            .affectedBySpectator(section.getBoolean("affected-by-spectator", true))
                             .affectedByScaling(section.getBoolean("affected-by-scale-attribute", true))
                             .carouselText(
                                     section.contains("text") ?

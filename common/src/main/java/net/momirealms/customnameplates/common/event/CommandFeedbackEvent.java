@@ -15,16 +15,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package net.momirealms.customnameplates.api.storage;
+package net.momirealms.customnameplates.common.event;
 
-public enum StorageType {
-	JSON,
-	YAML,
-	H2,
-	SQLITE,
-	MYSQL,
-	MARIADB,
-    MONGODB,
-	Redis,
-	NONE
+import net.kyori.adventure.text.Component;
+
+public interface CommandFeedbackEvent<C> extends NameplatesEvent, Cancellable {
+
+    @Param(0)
+    C sender();
+
+    @Param(1)
+    String key();
+
+    @Param(2)
+    Component message();
 }

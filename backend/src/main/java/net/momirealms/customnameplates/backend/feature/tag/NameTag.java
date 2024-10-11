@@ -63,7 +63,9 @@ public class NameTag extends AbstractTag implements RelationalFeature {
                 owner.position().add(0,(1.8 + (affectedByCrouching() && tracker.isCrouching() && !owner.isFlying() ? -0.3 : 0) + renderer.hatOffset()) * (affectedByScaling() ? tracker.getScale() : 1),0),
                 0f, 0f, 0d,
                 0, 0, 0,
-                component, config.backgroundColor(), config.opacity(), config.hasShadow(), config.isSeeThrough(), config.useDefaultBackgroundColor(),
+                component, config.backgroundColor(),
+                (owner.isSpectator() && affectedBySpectator()) || (owner.isCrouching() && affectedByCrouching()) ? 64 : opacity(),
+                config.hasShadow(), config.isSeeThrough(), config.useDefaultBackgroundColor(),
                 config.alignment(), config.viewRange(), config.shadowRadius(), config.shadowStrength(),
                 (affectedByScaling() ? scale(viewer).multiply(tracker.getScale()) : scale(viewer)),
                 (affectedByScaling() ? translation(viewer).multiply(tracker.getScale()) : translation(viewer)),
@@ -101,7 +103,7 @@ public class NameTag extends AbstractTag implements RelationalFeature {
             currentText = carouselText.preParsedDynamicText().fastCreate(owner);
 
             if (carouselText.updateOnDisplay()) {
-                owner.forceUpdate(currentText.placeholders(), owner.nearbyPlayers());
+                owner.forceUpdatePlaceholders(currentText.placeholders(), owner.nearbyPlayers());
             }
 
             refresh();
@@ -129,22 +131,25 @@ public class NameTag extends AbstractTag implements RelationalFeature {
     }
 
     public void refresh() {
+        if (!isShown()) return;
         for (CNPlayer viewer : viewerArray) {
             refresh(viewer);
         }
     }
 
     public void refresh(CNPlayer viewer) {
-        String newName = currentText.render(viewer);
-        Object component = AdventureHelper.miniMessageToMinecraftComponent(newName);
-        Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(CustomNameplates.getInstance().getPlatform().createTextComponentModifier(component)));
-        CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
+        if (isShown(viewer)) {
+            String newName = currentText.render(viewer);
+            Object component = AdventureHelper.miniMessageToMinecraftComponent(newName);
+            Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(CustomNameplates.getInstance().getPlatform().createTextComponentModifier(component)));
+            CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
+        }
     }
 
     @Override
     public double getTextHeight(CNPlayer viewer) {
         String current = currentText.render(viewer);
-        Tracker tracker = viewer.getTracker(owner);
+        Tracker tracker = owner.getTracker(viewer);
         int lines = CustomNameplates.getInstance().getAdvanceManager().getLines(current, config.lineWidth());
         return ((lines * (9+1) + config.translation().y()) * config.scale().y() * (config.affectedByScaling() ? tracker.getScale() : 1)) / 40;
     }
@@ -170,6 +175,11 @@ public class NameTag extends AbstractTag implements RelationalFeature {
     @Override
     public Vector3 translation(CNPlayer viewer) {
         return config.translation().add(0, renderer.hatOffset(), 0);
+    }
+
+    @Override
+    public boolean relativeTranslation() {
+        return false;
     }
 
     @Override
@@ -204,11 +214,16 @@ public class NameTag extends AbstractTag implements RelationalFeature {
 
     @Override
     public boolean affectedByCrouching() {
-        return config.affectedByScaling();
+        return config.affectedByCrouching();
     }
 
     @Override
     public boolean affectedByScaling() {
-        return affectedByCrouching();
+        return config.affectedByScaling();
+    }
+
+    @Override
+    public boolean affectedBySpectator() {
+        return config.affectedBySpectator();
     }
 }
