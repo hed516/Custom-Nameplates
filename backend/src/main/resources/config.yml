@@ -23,8 +23,9 @@ modules:
 integrations:
   resource-pack:
     ItemsAdder: false         # Integration with ItemsAdder
-    ItemsAdder-old-method: false # Old method for ItemsAdder
+    ItemsAdder-old-method: false # Legacy integration with ItemsAdder
     Oraxen: false             # Integration with Oraxen
+    Nexo: false               # Integration with Nexo
     Creative-Central: false   # Integration with Creative-Central
   chat:
     TrChat: false             # Integration with TrChat
@@ -34,6 +35,7 @@ integrations:
     AdvancedChat: false       # Integration with AdvancedChat
     Essentials: false         # Integration with Essentials chat
     ChatControlRed: false     # Integration with ChatControlRed
+    Chatty: false             # Integration with Chatty
 
 # Resource Pack Generation Settings: Configure resource pack generation behavior.
 resource-pack:
@@ -61,7 +63,7 @@ resource-pack:
 # Additional Settings: Extra options to control behavior and performance.
 other-settings:
   legacy-color-code-support: true     # Enable support for legacy color codes using &
-  send-delay: 20                      # Set actionbar/bossbar send delay (ticks)
+  send-delay: 20                      # Set actionbar/bossbar send delay (ticks)  (0 = send immediately on async threads, -1 = send immediately on main thread)
   catch-other-plugin-actionbar: true  # Capture actionbars from other plugins
   other-actionbar-stay-time: 3000     # How long does other actionsbars stay (ms)
   display-system-actionbar: true      # Should the plugin display system actionbar and temporarily hide the custom actionbar?
