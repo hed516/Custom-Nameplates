@@ -41,7 +41,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.*;
 
 public class ResourcePackManagerImpl implements ResourcePackManager {
@@ -243,6 +242,16 @@ public class ResourcePackManagerImpl implements ResourcePackManager {
                 FileUtils.copyDirectory(resourcePackFolder, new File(pluginsFolder, "Nexo" + File.separator + "pack" + File.separator + "external_packs" + File.separator + "CustomNameplates"));
             } catch (IOException e){
                 plugin.getPluginLogger().warn("Failed to copy files to Nexo", e);
+            }
+        }
+        if (ConfigManager.packCraftEngine()){
+            try {
+                FileUtils.deleteDirectory(new File(pluginsFolder, "CraftEngine" + File.separator + "resources" + File.separator + "nameplates"));
+                FileUtils.copyDirectory(resourcePackFolder, new File(pluginsFolder, "CraftEngine" + File.separator + "resources" + File.separator + "CustomNameplates" + File.separator + "resourcepack"));
+                FileUtils.delete(new File(pluginsFolder, "CraftEngine" + File.separator + "resources" + File.separator + "CustomNameplates" + File.separator + "resourcepack" + File.separator + "pack.mcmeta"));
+                FileUtils.delete(new File(pluginsFolder, "CraftEngine" + File.separator + "resources" + File.separator + "CustomNameplates" + File.separator + "resourcepack" + File.separator + "pack.png"));
+            } catch (IOException e){
+                plugin.getPluginLogger().warn("Failed to copy files to CraftEngine", e);
             }
         }
         if(ConfigManager.packCreativeCentral()) {
