@@ -1035,11 +1035,39 @@ public class Reflections {
             )
     );
 
-    public static final Field field$ClientboundSetPlayerTeamPacket$Parameters$nametagVisibility = requireNonNull(
-            ReflectionUtils.getInstanceDeclaredField(
-                    clazz$ClientboundSetPlayerTeamPacket$Parameters, String.class, 0
+    public static final Class<?> clazz$Team$Visibility = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("world.scores.ScoreboardTeamBase$EnumNameTagVisibility"),
+                    BukkitReflectionUtils.assembleMCClass("world.scores.Team$Visibility")
             )
     );
+
+    public static final Field field$ClientboundSetPlayerTeamPacket$Parameters$nametagVisibility = requireNonNull(
+            VersionHelper.isVersionNewerThan1_21_5() ?
+                    ReflectionUtils.getInstanceDeclaredField(
+                            clazz$ClientboundSetPlayerTeamPacket$Parameters, clazz$Team$Visibility, 0
+                    )
+                    : ReflectionUtils.getInstanceDeclaredField(
+                            clazz$ClientboundSetPlayerTeamPacket$Parameters, String.class, 0
+                    )
+    );
+
+    public static final Method method$Team$Visibility$values = requireNonNull(
+            ReflectionUtils.getStaticMethod(
+                    clazz$Team$Visibility, clazz$Team$Visibility.arrayType()
+            )
+    );
+
+    public static final Object instance$Team$Visibility$NEVER;
+
+    static {
+        try {
+            Object[] values = (Object[]) method$Team$Visibility$values.invoke(null);
+            instance$Team$Visibility$NEVER = values[1];
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static final Class<?> clazz$ServerConnectionListener = requireNonNull(
             ReflectionUtils.getClazz(
@@ -1162,4 +1190,58 @@ public class Reflections {
             throw new RuntimeException(e);
         }
     }
+
+    public static final Class<?> clazz$AdventureComponent = requireNonNull(
+            ReflectionUtils.getClazz(
+                    "net{}kyori{}adventure{}text{}Component".replace("{}", ".")
+            )
+    );
+
+    // <= 1.20.4
+    public static final Field field$ClientboundSetActionBarTextPacket$adventure$text =
+            ReflectionUtils.getDeclaredField(
+                    clazz$ClientboundSetActionBarTextPacket, clazz$AdventureComponent, 0
+            );
+
+    public static final Class<?> clazz$ComponentSerializer = requireNonNull(
+            ReflectionUtils.getClazz(
+                    "net{}kyori{}adventure{}text{}serializer{}ComponentSerializer".replace("{}", ".")
+            )
+    );
+
+    public static final Class<?> clazz$GsonComponentSerializer = requireNonNull(
+            ReflectionUtils.getClazz(
+                    "net{}kyori{}adventure{}text{}serializer{}gson{}GsonComponentSerializer".replace("{}", ".")
+            )
+    );
+
+    public static final Class<?> clazz$GsonComponentSerializer$Builder = requireNonNull(
+            ReflectionUtils.getClazz(
+                    "net{}kyori{}adventure{}text{}serializer{}gson{}GsonComponentSerializer$Builder".replace("{}", ".")
+            )
+    );
+
+    public static final Method method$GsonComponentSerializer$builder = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$GsonComponentSerializer, clazz$GsonComponentSerializer$Builder
+            )
+    );
+
+    public static final Method method$GsonComponentSerializer$Builder$build = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$GsonComponentSerializer$Builder, clazz$GsonComponentSerializer
+            )
+    );
+
+    public static final Method method$ComponentSerializer$serialize = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$ComponentSerializer, Object.class, new String[] {"serialize"}, clazz$AdventureComponent
+            )
+    );
+
+    public static final Method method$ComponentSerializer$deserialize = requireNonNull(
+            ReflectionUtils.getMethod(
+                    clazz$ComponentSerializer, Object.class, new String[] {"deserialize"}, Object.class
+            )
+    );
 }
