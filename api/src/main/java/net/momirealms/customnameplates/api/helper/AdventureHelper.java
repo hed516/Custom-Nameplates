@@ -23,6 +23,8 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.json.JSONOptions;
+import net.kyori.adventure.text.serializer.json.legacyimpl.NBTLegacyHoverEventSerializer;
 import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 
@@ -52,7 +54,19 @@ public class AdventureHelper {
     private AdventureHelper() {
         this.miniMessage = MiniMessage.builder().build();
         this.miniMessageStrict = MiniMessage.builder().strict(true).build();
-        this.gsonComponentSerializer = GsonComponentSerializer.builder().build();
+        GsonComponentSerializer.Builder builder = GsonComponentSerializer.builder();
+        if (!VersionHelper.isVersionNewerThan1_20_5()) {
+            builder.legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get());
+            builder.editOptions((b) -> b.value(JSONOptions.EMIT_HOVER_SHOW_ENTITY_ID_AS_INT_ARRAY, false));
+        }
+        if (!VersionHelper.isVersionNewerThan1_21_5()) {
+            builder.editOptions((b) -> {
+                b.value(JSONOptions.EMIT_CLICK_EVENT_TYPE, JSONOptions.ClickEventValueMode.CAMEL_CASE);
+                b.value(JSONOptions.EMIT_HOVER_EVENT_TYPE, JSONOptions.HoverEventValueMode.CAMEL_CASE);
+                b.value(JSONOptions.EMIT_HOVER_SHOW_ENTITY_KEY_AS_TYPE_AND_UUID_AS_ID, true);
+            });
+        }
+        this.gsonComponentSerializer = builder.build();
 
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, r -> {
             Thread thread = Executors.defaultThreadFactory().newThread(r);
@@ -306,19 +320,19 @@ public class AdventureHelper {
                 case '7' -> stringBuilder.append("<gray>");
                 case '8' -> stringBuilder.append("<dark_gray>");
                 case '9' -> stringBuilder.append("<blue>");
-                case 'a' -> stringBuilder.append("<green>");
-                case 'b' -> stringBuilder.append("<aqua>");
-                case 'c' -> stringBuilder.append("<red>");
-                case 'd' -> stringBuilder.append("<light_purple>");
-                case 'e' -> stringBuilder.append("<yellow>");
-                case 'f' -> stringBuilder.append("<white>");
-                case 'r' -> stringBuilder.append("<reset>");
-                case 'l' -> stringBuilder.append("<b>");
-                case 'm' -> stringBuilder.append("<st>");
-                case 'o' -> stringBuilder.append("<i>");
-                case 'n' -> stringBuilder.append("<u>");
-                case 'k' -> stringBuilder.append("<obf>");
-                case 'x' -> {
+                case 'a', 'A' -> stringBuilder.append("<green>");
+                case 'b', 'B' -> stringBuilder.append("<aqua>");
+                case 'c', 'C' -> stringBuilder.append("<red>");
+                case 'd', 'D' -> stringBuilder.append("<light_purple>");
+                case 'e', 'E' -> stringBuilder.append("<yellow>");
+                case 'f', 'F' -> stringBuilder.append("<white>");
+                case 'r', 'R' -> stringBuilder.append("<reset>");
+                case 'l', 'L' -> stringBuilder.append("<b>");
+                case 'm', 'M' -> stringBuilder.append("<st>");
+                case 'o', 'O' -> stringBuilder.append("<i>");
+                case 'n', 'N' -> stringBuilder.append("<u>");
+                case 'k', 'K' -> stringBuilder.append("<obf>");
+                case 'x', 'X' -> {
                     if (i + 13 >= chars.length
                             || !isLegacyColorCode(chars[i+2])
                             || !isLegacyColorCode(chars[i+4])

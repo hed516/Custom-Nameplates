@@ -458,7 +458,7 @@ public class BukkitPlatform implements Platform {
                         Optional<Object> optionalParameters = (Optional<Object>) Reflections.field$ClientboundSetPlayerTeamPacket$parameters.get(packet);
                         if (optionalParameters.isPresent()) {
                             Object parameters = optionalParameters.get();
-                            Reflections.field$ClientboundSetPlayerTeamPacket$Parameters$nametagVisibility.set(parameters, "never");
+                            Reflections.field$ClientboundSetPlayerTeamPacket$Parameters$nametagVisibility.set(parameters, VersionHelper.isVersionNewerThan1_21_5() ? Reflections.instance$Team$Visibility$NEVER : "never");
                         }
                     }
                     // add members
@@ -482,35 +482,19 @@ public class BukkitPlatform implements Platform {
 
     @Override
     public Object jsonToMinecraftComponent(String json) {
-        if (VersionHelper.isVersionNewerThan1_20_5()) {
-            try {
-                return Reflections.method$Component$Serializer$fromJson.invoke(null, json, Reflections.instance$MinecraftRegistry);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            try {
-                return Reflections.method$CraftChatMessage$fromJSON.invoke(null, json);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            return Reflections.method$CraftChatMessage$fromJSON.invoke(null, json);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public String minecraftComponentToJson(Object component) {
-        if (VersionHelper.isVersionNewerThan1_20_5()) {
-            try {
-                return (String) Reflections.method$Component$Serializer$toJson.invoke(null, component, Reflections.instance$MinecraftRegistry);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            try {
-                return (String) Reflections.method$CraftChatMessage$toJSON.invoke(null, component);
-            } catch (ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
+        try {
+            return (String) Reflections.method$CraftChatMessage$toJSON.invoke(null, component);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
         }
     }
 
