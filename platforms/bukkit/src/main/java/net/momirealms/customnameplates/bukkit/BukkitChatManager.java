@@ -17,8 +17,10 @@
 
 package net.momirealms.customnameplates.bukkit;
 
+import net.momirealms.customnameplates.api.CNPlayer;
 import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
+import net.momirealms.customnameplates.api.helper.AdventureHelper;
 import net.momirealms.customnameplates.api.helper.VersionHelper;
 import net.momirealms.customnameplates.backend.feature.chat.AbstractChatManager;
 import net.momirealms.customnameplates.bukkit.compatibility.chat.*;
@@ -58,6 +60,9 @@ public class BukkitChatManager extends AbstractChatManager {
         } else if (ConfigManager.chatChatty() && Bukkit.getPluginManager().isPluginEnabled("Chatty")) {
             this.chatProvider = new ChattyProvider(plugin, this);
             plugin.getPluginLogger().info("Chatty hooked!");
+        } else if (ConfigManager.chatZel() && Bukkit.getPluginManager().isPluginEnabled("ZelChat")) {
+            this.chatProvider = new ZelChatProvider(plugin, this);
+            plugin.getPluginLogger().info("ZelChat hooked!");
         } else if (VersionHelper.isPaperOrItsForks()) {
             this.chatProvider = new PaperAsyncChatProvider(plugin, this);
         } else {
@@ -76,6 +81,15 @@ public class BukkitChatManager extends AbstractChatManager {
                 this.emojiProviders.add(new OraxenEmojiProvider(Bukkit.getPluginManager().getPlugin("Oraxen").getDescription().getVersion().startsWith("1") ? 1 : 2));
             } catch (Exception ignore) {
             }
+        }
+    }
+
+    @Override
+    public void onChat(CNPlayer player, String message, String channel) {
+        if (ConfigManager.stripChatColorTags()) {
+            super.onChat(player, AdventureHelper.stripTags(AdventureHelper.legacyToMiniMessage(message)), channel);
+        } else {
+            super.onChat(player, message, channel);
         }
     }
 }

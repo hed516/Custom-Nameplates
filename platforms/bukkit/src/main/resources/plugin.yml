@@ -6,12 +6,16 @@ authors: [ XiaoMoMi ]
 folia-supported: true
 softdepend:
   - PlaceholderAPI
+  - LuckPerms
   - MagicCosmetics
+  - ECosmetics
+  - HMCCosmetics
   - ItemsAdder
   - Oraxen
   - TrChat
   - CarbonChat
   - HuskChat
+  - ZelChat
   - AdvancedChat
   - VentureChat
   - EssentialsChat

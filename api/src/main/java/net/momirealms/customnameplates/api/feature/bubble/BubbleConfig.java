@@ -18,6 +18,7 @@
 package net.momirealms.customnameplates.api.feature.bubble;
 
 import net.momirealms.customnameplates.api.feature.PreParsedDynamicText;
+import net.momirealms.customnameplates.api.util.Billboard;
 import net.momirealms.customnameplates.api.util.Vector3;
 
 /**
@@ -31,6 +32,15 @@ public interface BubbleConfig {
      * @return the configuration ID
      */
     String id();
+
+    /**
+     * Returns the command suggestion of the Bubble configuration.
+     *
+     * @return the configuration ID
+     */
+    default String commandSuggestion() {
+        return id();
+    }
 
     /**
      * Returns the background color of the Bubble text.
@@ -52,6 +62,20 @@ public interface BubbleConfig {
      * @return the maximum number of lines
      */
     int maxLines();
+
+    /**
+     * Returns if the bubble has shadow
+     *
+     * @return has shadow or not
+     */
+    boolean hasShadow();
+
+    /**
+     * Returns the billboard
+     *
+     * @return billboard
+     */
+    Billboard billboard();
 
     /**
      * Returns the bubbles used in this configuration.
@@ -109,6 +133,14 @@ public interface BubbleConfig {
          * @return the builder instance
          */
         Builder id(String id);
+
+        /**
+         * Sets the command suggestion for the BubbleConfig.
+         *
+         * @param suggestion the command suggestion
+         * @return the builder instance
+         */
+        Builder commandSuggestion(String suggestion);
 
         /**
          * Sets the display name for the BubbleConfig.
@@ -173,6 +205,22 @@ public interface BubbleConfig {
          * @return the builder instance
          */
         Builder scale(Vector3 scale);
+
+        /**
+         * Sets if the text has shadow
+         *
+         * @param hasShadow has shadow
+         * @return the builder instance
+         */
+        Builder hasShadow(boolean hasShadow);
+
+        /**
+         * Sets the billboard
+         *
+         * @param billboard billboard
+         * @return the builder instance
+         */
+        Builder billboard(Billboard billboard);
 
         /**
          * Builds and returns the configured BubbleConfig instance.

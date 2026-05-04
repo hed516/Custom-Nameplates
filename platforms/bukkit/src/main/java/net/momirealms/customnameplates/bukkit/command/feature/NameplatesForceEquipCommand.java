@@ -50,17 +50,20 @@ public class NameplatesForceEquipCommand extends BukkitCommandFeature<CommandSen
     public Command.Builder<? extends CommandSender> assembleCommand(CommandManager<CommandSender> manager, Command.Builder<CommandSender> builder) {
         return builder
                 .required("player", PlayerParser.playerParser())
-                .required("nameplate", StringParser.stringComponent().suggestionProvider(new SuggestionProvider<>() {
+                .required("nameplate", StringParser.stringComponent(StringParser.StringMode.GREEDY_FLAG_YIELDING).suggestionProvider(new SuggestionProvider<>() {
                     @Override
                     public @NonNull CompletableFuture<? extends @NonNull Iterable<? extends @NonNull Suggestion>> suggestionsFuture(@NonNull CommandContext<Object> context, @NonNull CommandInput input) {
-                        return CompletableFuture.completedFuture(plugin.getNameplateManager().nameplates().stream().map(it -> Suggestion.suggestion(it.id())).toList());
+                        return CompletableFuture.completedFuture(plugin.getNameplateManager().nameplates().stream().map(it -> Suggestion.suggestion(it.commandSuggestion())).toList());
                     }
                 }))
                 .handler(context -> {
                     if (!ConfigManager.nameplateModule()) return;
                     String nameplateId = context.get("nameplate");
                     Player bukkitPlayer = context.get("player");
-                    Nameplate nameplate = plugin.getNameplateManager().nameplateById(nameplateId);
+                    Nameplate nameplate = plugin.getNameplateManager().nameplateByCommand(nameplateId);
+                    if (nameplate == null) {
+                        nameplate = plugin.getNameplateManager().nameplateById(nameplateId);
+                    }
                     if (nameplate == null) {
                         handleFeedback(context, MessageConstants.COMMAND_NAMEPLATES_FORCE_EQUIP_FAILURE_NOT_EXISTS, Component.text(bukkitPlayer.getName()), Component.text(nameplateId));
                         return;
@@ -73,9 +76,9 @@ public class NameplatesForceEquipCommand extends BukkitCommandFeature<CommandSen
                         plugin.getPluginLogger().warn("Player " + player.name() + " tried to equip a nameplate when data not loaded");
                         return;
                     }
-                    player.setNameplateData(nameplateId);
+                    player.setNameplateData(nameplate.id());
                     player.save();
-                    handleFeedback(context, MessageConstants.COMMAND_NAMEPLATES_FORCE_EQUIP_SUCCESS, Component.text(bukkitPlayer.getName()), Component.text(nameplateId), AdventureHelper.miniMessage(nameplate.displayName()));
+                    handleFeedback(context, MessageConstants.COMMAND_NAMEPLATES_FORCE_EQUIP_SUCCESS, Component.text(bukkitPlayer.getName()), AdventureHelper.miniMessage(nameplate.displayName()));
                 });
     }
 

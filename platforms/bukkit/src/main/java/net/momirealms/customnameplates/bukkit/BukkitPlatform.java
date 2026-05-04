@@ -24,6 +24,7 @@ import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.Platform;
 import net.momirealms.customnameplates.api.feature.bossbar.BossBar;
+import net.momirealms.customnameplates.api.feature.tag.NameTagConfig;
 import net.momirealms.customnameplates.api.helper.AdventureHelper;
 import net.momirealms.customnameplates.api.helper.VersionHelper;
 import net.momirealms.customnameplates.api.network.PacketEvent;
@@ -31,6 +32,7 @@ import net.momirealms.customnameplates.api.network.Tracker;
 import net.momirealms.customnameplates.api.placeholder.DummyPlaceholder;
 import net.momirealms.customnameplates.api.placeholder.Placeholder;
 import net.momirealms.customnameplates.api.util.Alignment;
+import net.momirealms.customnameplates.api.util.Billboard;
 import net.momirealms.customnameplates.api.util.Vector3;
 import net.momirealms.customnameplates.backend.feature.actionbar.ActionBarManagerImpl;
 import net.momirealms.customnameplates.bukkit.util.BiomeUtils;
@@ -143,9 +145,23 @@ public class BukkitPlatform implements Platform {
         }, "ClientboundSetActionBarTextPacket");
 
         registerPacketConsumer((player, event, packet) -> {
+            try {
+                Object gameProfile = Reflections.field$ClientboundLoginFinishedPacket$gameProfile.get(packet);
+                if (gameProfile != null) {
+                    String name = (String) Reflections.field$GameProfile$name.get(gameProfile);
+                    BukkitCNPlayer bukkitCNPlayer = (BukkitCNPlayer) player;
+                    bukkitCNPlayer.setName(name);
+                }
+            } catch (ReflectiveOperationException e) {
+                CustomNameplates.getInstance().getPluginLogger().severe("Failed to handle ClientboundGameProfilePacket", e);
+            }
+        }, "PacketLoginOutSuccess", "ClientboundLoginFinishedPacket", "ClientboundGameProfilePacket");
+
+        registerPacketConsumer((player, event, packet) -> {
             if (!ConfigManager.actionbarModule()) return;
             if (!ConfigManager.catchOtherActionBar()) return;
             if (!player.shouldCNTakeOverActionBar()) return;
+            if (player.player() == null) return;
             try {
             boolean actionBar = (boolean) Reflections.field$ClientboundSystemChatPacket$overlay.get(packet);
                 if (actionBar) {
@@ -424,6 +440,10 @@ public class BukkitPlatform implements Platform {
                                     if (p == null) {
                                         return;
                                     }
+                                    // do not hide team name for the viewer
+                                    if (player.name().equals(entity)) {
+                                        return;
+                                    }
                                 }
                             }
                         }
@@ -449,6 +469,9 @@ public class BukkitPlatform implements Platform {
                                     Player p = Bukkit.getPlayer(entity);
                                     // it's a fake player
                                     if (p == null) {
+                                        return;
+                                    }
+                                    if (player.name().equals(entity)) {
                                         return;
                                     }
                                 }
@@ -506,15 +529,32 @@ public class BukkitPlatform implements Platform {
         Placeholder placeholder;
         if (id.startsWith("%rel_")) {
             placeholder = plugin.getPlaceholderManager().registerRelationalPlaceholder(id,
-                                                                        // viewer              // owner
-                    (p1, p2) -> PlaceholderAPI.setRelationalPlaceholders((Player) p2.player(), (Player) p1.player(), id));
+                    (p1, p2) -> {
+                        try {
+                            return PlaceholderAPI.setRelationalPlaceholders((Player) p2.player(), (Player) p1.player(), id);
+                        } catch (Exception e) {
+                            return id;
+                        }
+                    });
         } else if (id.startsWith("%shared_")) {
             String sub = "%" + id.substring("%shared_".length());
             placeholder =plugin.getPlaceholderManager().registerSharedPlaceholder(id,
-                    () -> PlaceholderAPI.setPlaceholders(null, sub));
+                    () -> {
+                        try {
+                            return PlaceholderAPI.setPlaceholders(null, sub);
+                        } catch (Exception e) {
+                            return sub;
+                        }
+                    });
         } else {
             placeholder = plugin.getPlaceholderManager().registerPlayerPlaceholder(id,
-                    (p) -> p == null ? PlaceholderAPI.setPlaceholders(null, id) : PlaceholderAPI.setPlaceholders((OfflinePlayer) p.player(), id));
+                    (p) -> {
+                        try {
+                            return p == null ? PlaceholderAPI.setPlaceholders(null, id) : PlaceholderAPI.setPlaceholders((OfflinePlayer) p.player(), id);
+                        } catch (Exception e) {
+                            return id;
+                        }
+                    });
         }
         return placeholder;
     }
@@ -573,9 +613,8 @@ public class BukkitPlatform implements Platform {
             int interpolationDelay, int transformationInterpolationDuration, int positionRotationInterpolationDuration,
             Object component, int backgroundColor, byte opacity,
             boolean hasShadow, boolean isSeeThrough, boolean useDefaultBackgroundColor, Alignment alignment,
-            float viewRange, float shadowRadius, float shadowStrength,
-            Vector3 scale, Vector3 translation, int lineWidth, boolean isCrouching
-    ) {
+            Billboard billboard, float viewRange, float shadowRadius, float shadowStrength,
+            Vector3 scale, Vector3 translation, int lineWidth, boolean isCrouching) {
         try {
             Object addEntityPacket = Reflections.constructor$ClientboundAddEntityPacket.newInstance(
                     entityID, uuid, position.x(), position.y(), position.z(), pitch, yaw,
@@ -591,7 +630,7 @@ public class BukkitPlatform implements Platform {
             } else {
                 EntityData.InterpolationDuration.addEntityDataIfNotDefaultValue(transformationInterpolationDuration, values);
             }
-            EntityData.BillboardConstraints.addEntityDataIfNotDefaultValue((byte) 3,                     values);
+            EntityData.BillboardConstraints.addEntityDataIfNotDefaultValue(billboard.id(),               values);
             EntityData.BackgroundColor.addEntityDataIfNotDefaultValue(     backgroundColor,              values);
             EntityData.Text.addEntityDataIfNotDefaultValue(                component,                    values);
             EntityData.TextOpacity.addEntityDataIfNotDefaultValue(         isCrouching ? 64 : opacity,   values);
@@ -641,8 +680,11 @@ public class BukkitPlatform implements Platform {
     }
 
     @Override
-    public Consumer<List<Object>> createOpacityModifier(byte opacity) {
-        return (values) -> EntityData.TextOpacity.addEntityData(opacity, values);
+    public Consumer<List<Object>> createSneakModifier(boolean sneak, boolean seeThrough, NameTagConfig config) {
+        return (values) -> {
+            EntityData.TextOpacity.addEntityData(sneak ? 64 : config.opacity(), values);
+            EntityData.TextDisplayMasks.addEntityData(EntityData.encodeMask(config.hasShadow(), seeThrough, config.useDefaultBackgroundColor(), config.alignment().getId()), values);
+        };
     }
 
     @Override

@@ -32,7 +32,6 @@ import net.momirealms.customnameplates.api.CNPlayer;
 import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.feature.CarouselText;
-import net.momirealms.customnameplates.api.feature.JoinQuitListener;
 import net.momirealms.customnameplates.api.feature.PlayerListener;
 import net.momirealms.customnameplates.api.feature.tag.NameTagConfig;
 import net.momirealms.customnameplates.api.feature.tag.TagRenderer;
@@ -41,27 +40,27 @@ import net.momirealms.customnameplates.api.helper.VersionHelper;
 import net.momirealms.customnameplates.api.network.Tracker;
 import net.momirealms.customnameplates.api.requirement.Requirement;
 import net.momirealms.customnameplates.api.util.Alignment;
+import net.momirealms.customnameplates.api.util.Billboard;
 import net.momirealms.customnameplates.api.util.ConfigUtils;
 import net.momirealms.customnameplates.api.util.Vector3;
+import net.momirealms.customnameplates.common.util.Tristate;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-public class UnlimitedTagManagerImpl implements UnlimitedTagManager, PlayerListener {
+public abstract class AbstractUnlimitedTagManager implements UnlimitedTagManager, PlayerListener {
+    protected final CustomNameplates plugin;
+    protected final LinkedHashMap<String, NameTagConfig> configs = new LinkedHashMap<>();
+    protected final ConcurrentHashMap<Integer, TagRendererImpl> tagRenderers = new ConcurrentHashMap<>();
+    protected NameTagConfig[] configArray = new NameTagConfig[0];
+    protected int previewDuration;
+    protected boolean alwaysShow;
 
-    private final CustomNameplates plugin;
-    private final LinkedHashMap<String, NameTagConfig> configs = new LinkedHashMap<>();
-    private final ConcurrentHashMap<Integer, TagRendererImpl> tagRenderers = new ConcurrentHashMap<>();
-    private NameTagConfig[] configArray = new NameTagConfig[0];
-    private int previewDuration;
-    private boolean alwaysShow;
-
-    public UnlimitedTagManagerImpl(CustomNameplates plugin) {
+    public AbstractUnlimitedTagManager(CustomNameplates plugin) {
         this.plugin = plugin;
     }
 
@@ -141,8 +140,8 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, PlayerListe
     @Override
     public void onPlayerJoin(CNPlayer player) {
         plugin.debug(() -> player.name() + " joined the server");
-        TagRendererImpl sender = new TagRendererImpl(this, player);
-        TagRendererImpl previous = tagRenderers.put(player.entityID(), sender);
+        TagRendererImpl renderer = new TagRendererImpl(this, player);
+        TagRendererImpl previous = tagRenderers.put(player.entityID(), renderer);
         if (previous != null) {
             previous.destroy();
         }
@@ -155,9 +154,9 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, PlayerListe
 
     @Override
     public void onPlayerQuit(CNPlayer player) {
-        TagRendererImpl sender = tagRenderers.remove(player.entityID());
-        if (sender != null) {
-            sender.destroy();
+        TagRendererImpl renderer = tagRenderers.remove(player.entityID());
+        if (renderer != null) {
+            renderer.destroy();
         }
     }
 
@@ -296,13 +295,14 @@ public class UnlimitedTagManagerImpl implements UnlimitedTagManager, PlayerListe
                             .viewerRequirement(plugin.getRequirementManager().parseRequirements(section.getSection("viewer-conditions")))
                             .translation(VersionHelper.isVersionNewerThan1_20_2() ? translation : translation.add(0,0.5,0))
                             .scale(ConfigUtils.vector3(section.getString("scale", "1,1,1")))
-                            .alignment(Alignment.valueOf(section.getString("alignment", "CENTER")))
+                            .alignment(section.getEnum("alignment", Alignment.class, Alignment.CENTER))
+                            .billboard(section.getEnum("billboard", Billboard.class, Billboard.CENTER))
                             .viewRange(section.getFloat("view-range", 1f))
                             .shadowRadius(section.getFloat("shadow-radius", 0f))
                             .shadowStrength(section.getFloat("shadow-strength", 1f))
                             .lineWidth(section.getInt("line-width", 200))
                             .hasShadow(section.getBoolean("has-shadow", false))
-                            .seeThrough(section.getBoolean("is-see-through", false))
+                            .seeThrough(Tristate.fromBoolean((Boolean) section.get("is-see-through")))
                             .opacity(section.getByte("opacity", (byte) -1))
                             .useDefaultBackgroundColor(section.getBoolean("use-default-background-color", false))
                             .backgroundColor(ConfigUtils.argb(section.getString("background-color", "64,0,0,0")))

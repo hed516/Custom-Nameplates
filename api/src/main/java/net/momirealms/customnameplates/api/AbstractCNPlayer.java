@@ -448,7 +448,12 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
                         return false;
                     }
                 } else {
-                    boolean satisfied = requirement.isSatisfied(this, this);
+                    boolean satisfied;
+                    try {
+                        satisfied = requirement.isSatisfied(this, this);
+                    } catch (Exception e) {
+                        satisfied = false;
+                    }
                     data.updateTicks(false);
                     data.data(satisfied);
                     if (!satisfied) {
@@ -456,7 +461,12 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
                     }
                 }
             } else {
-                boolean satisfied = requirement.isSatisfied(this, this);
+                boolean satisfied;
+                try {
+                    satisfied = requirement.isSatisfied(this, this);
+                } catch (Exception e) {
+                    satisfied = false;
+                }
                 data = new TimeStampData<>(satisfied, currentTicks, true);
                 cachedRequirements.put(requirement.countId(), data);
                 if (!satisfied) {
@@ -479,7 +489,12 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
                         return false;
                     }
                 } else {
-                    boolean satisfied = requirement.isSatisfied(this, another);
+                    boolean satisfied;
+                    try {
+                        satisfied = requirement.isSatisfied(this, another);
+                    } catch (Exception e) {
+                        satisfied = false;
+                    }
                     data.updateTicks(false);
                     data.data(satisfied);
                     if (!satisfied) {
@@ -487,7 +502,12 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
                     }
                 }
             } else {
-                boolean satisfied = requirement.isSatisfied(this, another);
+                boolean satisfied;
+                try {
+                    satisfied = requirement.isSatisfied(this, another);
+                } catch (Exception e) {
+                    satisfied = false;
+                }
                 data = new TimeStampData<>(satisfied, currentTicks, true);
                 innerMap.put(another, data);
                 if (!satisfied) {
@@ -643,12 +663,15 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
 
     @Override
     public void save() {
-        plugin.getStorageManager().dataSource().updatePlayerData(PlayerData.builder()
+        this.plugin.getStorageManager().dataSource().updatePlayerData(
+            PlayerData.builder()
                 .uuid(uuid())
                 .nameplate(nameplateData())
                 .bubble(bubbleData())
                 .previewTags(isToggleablePreviewing())
-                .build(), plugin.getScheduler().async());
+                .build(),
+            this.plugin.getScheduler().async()
+        );
     }
 
     @Override
@@ -671,7 +694,7 @@ public abstract class AbstractCNPlayer<P> implements CNPlayer {
 
     @Override
     public String name() {
-        return this.name;
+        return Optional.ofNullable(this.name).orElse("");
     }
 
     @Override

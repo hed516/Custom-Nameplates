@@ -18,7 +18,10 @@
 package net.momirealms.customnameplates.api.feature.bubble;
 
 import net.momirealms.customnameplates.api.feature.PreParsedDynamicText;
+import net.momirealms.customnameplates.api.util.Billboard;
 import net.momirealms.customnameplates.api.util.Vector3;
+
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +30,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class BubbleConfigImpl implements BubbleConfig {
     private final String id;
+    private final String commandSuggestion;
     private final int backgroundColor;
     private final int lineWidth;
     private final int maxLines;
@@ -35,11 +39,14 @@ public class BubbleConfigImpl implements BubbleConfig {
     private final PreParsedDynamicText textSuffix;
     private final String displayName;
     private final Vector3 scale;
+    private final boolean hasShadow;
+    private final Billboard billboard;
 
     /**
      * Constructs a new BubbleConfigImpl.
      *
      * @param id            the unique ID for the bubble configuration
+     * @param commandSuggestion the command suggestion for the bubble configuration
      * @param displayName   the name to be displayed for the bubble configuration
      * @param backgroundColor the background color for the bubble (in integer format)
      * @param lineWidth     the line width for the bubble display
@@ -48,22 +55,31 @@ public class BubbleConfigImpl implements BubbleConfig {
      * @param textPrefix    a prefix that will be added before the text in the bubble
      * @param textSuffix    a suffix that will be added after the text in the bubble
      * @param scale         the scale of the bubble display (as a Vector3)
+     * @param hasShadow     has shadow or not
      */
-    public BubbleConfigImpl(String id, String displayName, int backgroundColor, int lineWidth, int maxLines, Bubble[] bubbles, String textPrefix, String textSuffix, Vector3 scale) {
+    public BubbleConfigImpl(String id, String commandSuggestion, String displayName, int backgroundColor, int lineWidth, int maxLines, Bubble[] bubbles, String textPrefix, String textSuffix, Vector3 scale, boolean hasShadow, Billboard billboard) {
         this.backgroundColor = backgroundColor;
         this.lineWidth = lineWidth;
         this.maxLines = maxLines;
         this.id = id;
+        this.commandSuggestion = commandSuggestion;
         this.bubbles = requireNonNull(bubbles);
         this.textPrefix = new PreParsedDynamicText(requireNonNull(textPrefix), true);
         this.textSuffix = new PreParsedDynamicText(requireNonNull(textSuffix), true);
         this.displayName = requireNonNull(displayName);
         this.scale = requireNonNull(scale);
+        this.hasShadow = hasShadow;
+        this.billboard = billboard;
     }
 
     @Override
     public String id() {
-        return id;
+        return this.id;
+    }
+
+    @Override
+    public String commandSuggestion() {
+        return this.commandSuggestion;
     }
 
     @Override
@@ -106,6 +122,16 @@ public class BubbleConfigImpl implements BubbleConfig {
         return scale;
     }
 
+    @Override
+    public boolean hasShadow() {
+        return hasShadow;
+    }
+
+    @Override
+    public Billboard billboard() {
+        return billboard;
+    }
+
     /**
      * Builder implementation for creating BubbleConfigImpl instances.
      */
@@ -117,8 +143,11 @@ public class BubbleConfigImpl implements BubbleConfig {
         private String textPrefix;
         private String textSuffix;
         private String id;
+        private String commandSuggestion;
         private String displayName;
         private Vector3 scale;
+        private boolean hasShadow;
+        private Billboard billboard;
 
         @Override
         public Builder id(String id) {
@@ -129,6 +158,12 @@ public class BubbleConfigImpl implements BubbleConfig {
         @Override
         public Builder displayName(String displayName) {
             this.displayName = displayName;
+            return this;
+        }
+
+        @Override
+        public Builder commandSuggestion(String commandSuggestion) {
+            this.commandSuggestion = commandSuggestion;
             return this;
         }
 
@@ -175,8 +210,20 @@ public class BubbleConfigImpl implements BubbleConfig {
         }
 
         @Override
+        public Builder hasShadow(boolean hasShadow) {
+            this.hasShadow = hasShadow;
+            return this;
+        }
+
+        @Override
+        public Builder billboard(Billboard billboard) {
+            this.billboard = billboard;
+            return this;
+        }
+
+        @Override
         public BubbleConfig build() {
-            return new BubbleConfigImpl(id, displayName, backgroundColor, lineWidth, maxLines, bubbles, textPrefix, textSuffix, scale);
+            return new BubbleConfigImpl(id, Optional.ofNullable(this.commandSuggestion).orElse(id), displayName, backgroundColor, lineWidth, maxLines, bubbles, textPrefix, textSuffix, scale, hasShadow, billboard);
         }
     }
 }

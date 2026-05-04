@@ -34,6 +34,7 @@ import net.momirealms.customnameplates.api.util.Vector3;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class NameTag extends AbstractTag implements RelationalFeature {
 
@@ -58,6 +59,7 @@ public class NameTag extends AbstractTag implements RelationalFeature {
         String newName = currentText.render(viewer);
         Object component = AdventureHelper.miniMessageToMinecraftComponent(newName);
         Tracker tracker = owner.getTracker(viewer);
+        if (tracker == null) return List.of();
         return CustomNameplates.getInstance().getPlatform().createTextDisplayPacket(
                 entityID, uuid,
                 owner.position().add(0,(1.8 + (affectedByCrouching() && tracker.isCrouching() && !owner.isFlying() ? -0.3 : 0) + renderer.hatOffset()) * (affectedByScaling() ? tracker.getScale() : 1),0),
@@ -65,13 +67,22 @@ public class NameTag extends AbstractTag implements RelationalFeature {
                 0, 0, 0,
                 component, config.backgroundColor(),
                 (owner.isSpectator() && affectedBySpectator()) || (owner.isCrouching() && affectedByCrouching()) ? 64 : opacity(),
-                config.hasShadow(), config.isSeeThrough(), config.useDefaultBackgroundColor(),
-                config.alignment(), config.viewRange(), config.shadowRadius(), config.shadowStrength(),
+                config.hasShadow(), config.isSeeThrough().asBoolean() && (!affectedByCrouching() || !tracker.isCrouching()), config.useDefaultBackgroundColor(),
+                config.alignment(), config.billboard(), config.viewRange(), config.shadowRadius(), config.shadowStrength(),
                 (affectedByScaling() ? scale(viewer).multiply(tracker.getScale()) : scale(viewer)),
                 (affectedByScaling() ? translation(viewer).multiply(tracker.getScale()) : translation(viewer)),
                 config.lineWidth(),
                 (affectedByCrouching() && tracker.isCrouching())
         );
+    }
+
+    @Override
+    public void darkTag(CNPlayer viewer, boolean dark) {
+        Tracker tracker = owner.getTracker(viewer);
+        boolean seeThrough = config.isSeeThrough().asBoolean() && (!affectedByCrouching() || !tracker.isCrouching());
+        Consumer<List<Object>> modifiers = CustomNameplates.getInstance().getPlatform().createSneakModifier(dark, seeThrough, this.config);
+        Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(modifiers));
+        CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
     }
 
     @Override

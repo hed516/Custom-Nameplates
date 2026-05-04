@@ -9,16 +9,22 @@ repositories {
     maven("https://repo.oraxen.com/releases/")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/") // papi
     maven("https://repo.essentialsx.net/releases/") // ess
-    maven("https://repo.md-5.net/content/groups/public/") // disguise
+    maven("https://mvn.lib.co.nz/public") // disguise
     maven("https://repo.opencollab.dev/main/") // geyser
     maven("https://maven.enginehub.org/repo/") // worldguard worldedit
     maven("https://repo.alessiodp.com/releases/") // parties
+    maven("https://maven.devs.beer/") // ia
+    maven("https://repo.pinodev.it/releases/") // zelchat
+    maven("https://repo.hibiscusmc.com/releases") // hmccosmetics
 }
 
 dependencies {
     compileOnly(project(":api"))
     compileOnly(project(":backend"))
+    compileOnly("net.kyori:adventure-api:${rootProject.properties["adventure_bundle_version"]}")
     compileOnly("dev.dejvokep:boosted-yaml:${rootProject.properties["boosted_yaml_version"]}")
+    // Permission
+    compileOnly("net.luckperms:api:5.4")
     // WorldGuard
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.9")
     // Platform
@@ -26,20 +32,25 @@ dependencies {
     // Chat
     compileOnly(files("libs/VentureChat-3.7.1.jar"))
     compileOnly(files("libs/TrChat-2.0.11.jar"))
-    compileOnly(files("libs/carbonchat-paper-3.0.0-beta.27.jar"))
     compileOnly(files("libs/AdvancedChat-1.3.7.jar"))
     compileOnly(files("libs/CMIAPI-9.7.4.1.jar"))
     compileOnly(files("libs/ChatControl-11.3.1.jar"))
     compileOnly(files("libs/Typewriter.jar"))
+    compileOnly("de.hexaoxi:carbonchat-api:3.0.0-beta.36")
     compileOnly("net.william278.huskchat:huskchat-bukkit:3.0.4")
-    compileOnly("net.essentialsx:EssentialsX:2.20.1")
-    compileOnly("net.essentialsx:EssentialsXChat:2.20.1")
+    compileOnly("net.essentialsx:EssentialsX:2.20.1") {
+        exclude(module = "spigot-api")
+    }
+    compileOnly("net.essentialsx:EssentialsXChat:2.20.1") {
+        exclude(module = "spigot-api")
+    }
     compileOnly("com.alessiodp.parties:parties-api:3.2.16")
     compileOnly("com.alessiodp.parties:parties-bukkit:3.2.16")
+    compileOnly("it.pino.zelchat:zelchat-api:2.0.0-pre-13")
 //    compileOnly("com.github.Brikster:Chatty:v2.19.14")
     compileOnly(files("libs/Chatty-3.0.0-SNAPSHOT.jar"))
     // Emoji
-    compileOnly("com.github.LoneDev6:api-itemsadder:3.6.3-beta-14")
+    compileOnly("dev.lone:api-itemsadder:4.0.10")
     compileOnly("io.th0rgal:oraxen:1.182.0")
     // PAPI
     compileOnly("me.clip:placeholderapi:${rootProject.properties["placeholder_api_version"]}")
@@ -51,6 +62,9 @@ dependencies {
     compileOnly("org.geysermc.floodgate:api:2.2.3-SNAPSHOT")
     // Cosmetics
     compileOnly("com.github.FrancoBM12:API-MagicCosmetics:2.2.9")
+    compileOnly("com.github.flestiz:API-ECosmetics:1.0.2")
+    compileOnly("com.hibiscusmc:HMCCosmetics:2.8.3")
+    compileOnly("me.lojosho:HibiscusCommons:0.8.3")
 }
 
 java {
@@ -63,6 +77,6 @@ java {
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-    options.release.set(17)
+    options.release.set(21)
     dependsOn(tasks.clean)
 }

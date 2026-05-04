@@ -24,6 +24,7 @@ import net.momirealms.customnameplates.api.feature.JoinQuitListener;
 import net.momirealms.customnameplates.api.feature.PlayerListener;
 import net.momirealms.customnameplates.api.helper.AdventureHelper;
 import net.momirealms.customnameplates.api.helper.VersionHelper;
+import net.momirealms.customnameplates.api.storage.data.PlayerData;
 import net.momirealms.customnameplates.api.util.Vector3;
 import net.momirealms.customnameplates.backend.feature.actionbar.ActionBarManagerImpl;
 import net.momirealms.customnameplates.backend.feature.advance.AdvanceManagerImpl;
@@ -33,17 +34,21 @@ import net.momirealms.customnameplates.backend.feature.bubble.BubbleManagerImpl;
 import net.momirealms.customnameplates.backend.feature.image.ImageManagerImpl;
 import net.momirealms.customnameplates.backend.feature.nameplate.NameplateManagerImpl;
 import net.momirealms.customnameplates.backend.feature.pack.ResourcePackManagerImpl;
-import net.momirealms.customnameplates.backend.feature.tag.UnlimitedTagManagerImpl;
+import net.momirealms.customnameplates.backend.feature.tag.AbstractUnlimitedTagManager;
 import net.momirealms.customnameplates.backend.placeholder.PlaceholderManagerImpl;
 import net.momirealms.customnameplates.backend.storage.StorageManagerImpl;
 import net.momirealms.customnameplates.bukkit.command.BukkitCommandManager;
 import net.momirealms.customnameplates.bukkit.compatibility.NameplatesExpansion;
 import net.momirealms.customnameplates.bukkit.compatibility.NameplatesExtraExpansion;
+import net.momirealms.customnameplates.bukkit.compatibility.cosmetic.ECosmeticsHook;
+import net.momirealms.customnameplates.bukkit.compatibility.cosmetic.HMCCosmeticsHook;
 import net.momirealms.customnameplates.bukkit.compatibility.cosmetic.MagicCosmeticsHook;
+import net.momirealms.customnameplates.bukkit.compatibility.perm.LuckPermsEventListeners;
 import net.momirealms.customnameplates.bukkit.compatibility.quest.TypeWriterListener;
 import net.momirealms.customnameplates.bukkit.compatibility.region.WorldGuardRegion;
 import net.momirealms.customnameplates.bukkit.requirement.BukkitRequirementManager;
 import net.momirealms.customnameplates.bukkit.scheduler.BukkitSchedulerAdapter;
+import net.momirealms.customnameplates.bukkit.tag.BukkitUnlimitedTagManager;
 import net.momirealms.customnameplates.bukkit.util.Reflections;
 import net.momirealms.customnameplates.bukkit.util.SimpleLocation;
 import net.momirealms.customnameplates.common.dependency.Dependency;
@@ -165,7 +170,7 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         this.nameplateManager = new NameplateManagerImpl(this);
         this.placeholderManager = new PlaceholderManagerImpl(this);
         this.imageManager = new ImageManagerImpl(this);
-        this.unlimitedTagManager = new UnlimitedTagManagerImpl(this);
+        this.unlimitedTagManager = new BukkitUnlimitedTagManager(this);
         this.requirementManager = new BukkitRequirementManager(this);
         this.storageManager = new StorageManagerImpl(this);
         this.chatManager = new BukkitChatManager(this);
@@ -187,18 +192,49 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         if (Bukkit.getPluginManager().isPluginEnabled("MagicCosmetics")) {
             try {
                 Bukkit.getPluginManager().registerEvents(new MagicCosmeticsHook(this), this.getBootstrap());
-            } catch (Exception ignore) {
+            } catch (Throwable ignore) {
+            }
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("ECosmetics")) {
+            try {
+                Bukkit.getPluginManager().registerEvents(new ECosmeticsHook(this), this.getBootstrap());
+            } catch (Throwable ignore) {
+            }
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("HMCCosmetics")) {
+            try {
+                Bukkit.getPluginManager().registerEvents(new HMCCosmeticsHook(this), this.getBootstrap());
+            } catch (Throwable ignore) {
             }
         }
         if (Bukkit.getPluginManager().isPluginEnabled("WorldGuard")) {
             try {
                 WorldGuardRegion.register();
-            } catch (Exception ignore) {
+            } catch (Throwable ignore) {
             }
         }
         if (Bukkit.getPluginManager().isPluginEnabled("Typewriter")) {
-            TypeWriterListener listener = new TypeWriterListener(this);
-            Bukkit.getPluginManager().registerEvents(listener, this.getBootstrap());
+            try {
+                TypeWriterListener listener = new TypeWriterListener(this);
+                Bukkit.getPluginManager().registerEvents(listener, this.getBootstrap());
+            } catch (Throwable ignore) {
+            }
+        }
+        if (Bukkit.getPluginManager().isPluginEnabled("LuckPerms")) {
+            try {
+                new LuckPermsEventListeners(this.bootstrap, (uuid) -> {
+                    CNPlayer cnPlayer = getPlayer(uuid);
+                    if (cnPlayer != null) {
+                        if (!nameplateManager.hasNameplate(cnPlayer, cnPlayer.nameplateData())) {
+                            cnPlayer.setNameplateData(PlayerData.DEFAULT_NAMEPLATE);
+                        }
+                        if (!bubbleManager.hasBubble(cnPlayer, cnPlayer.bubbleData())) {
+                            cnPlayer.setBubbleData(PlayerData.DEFAULT_BUBBLE);
+                        }
+                    }
+                });
+            } catch (Throwable ignore) {
+            }
         }
 
         this.reload();
@@ -370,7 +406,6 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
     public void handleJoin(Player player) {
         CNPlayer user = pipelineInjector.getUser(player);
         if (user == null) {
-            getPluginLogger().severe("Player " + player.getName() + " has not been injected yet");
             return;
         }
         ((BukkitCNPlayer) user).setPlayer(player);
@@ -392,7 +427,6 @@ public class BukkitCustomNameplates extends CustomNameplates implements Listener
         Player player = event.getPlayer();
         CNPlayer cnPlayer = onlinePlayerMap.remove(player.getUniqueId());
         if (cnPlayer == null) {
-            getPluginLogger().severe("Player " + player.getName() + " is not recorded by CustomNameplates");
             return;
         }
         for (JoinQuitListener listener : joinQuitListeners) {

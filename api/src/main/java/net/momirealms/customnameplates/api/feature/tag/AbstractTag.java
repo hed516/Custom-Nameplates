@@ -75,6 +75,10 @@ public abstract class AbstractTag implements Tag {
         this.renderer = renderer;
     }
 
+    public CNPlayer[] viewerArray() {
+        return this.viewerArray;
+    }
+
     /**
      * Spawns the tag for the given viewer by sending a packet to the viewer.
      *
@@ -160,13 +164,6 @@ public abstract class AbstractTag implements Tag {
         for (CNPlayer viewer : viewerArray) {
             darkTag(viewer, dark);
         }
-    }
-
-    @Override
-    public void darkTag(CNPlayer viewer, boolean dark) {
-        Consumer<List<Object>> modifiers = CustomNameplates.getInstance().getPlatform().createOpacityModifier(dark ? 64 : opacity());
-        Object packet = CustomNameplates.getInstance().getPlatform().updateTextDisplayPacket(entityID, List.of(modifiers));
-        CustomNameplates.getInstance().getPacketSender().sendPacket(viewer, packet);
     }
 
     @Override

@@ -19,6 +19,7 @@ package net.momirealms.customnameplates.backend.feature.tag;
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.momirealms.customnameplates.api.CNPlayer;
+import net.momirealms.customnameplates.api.ConfigManager;
 import net.momirealms.customnameplates.api.CustomNameplates;
 import net.momirealms.customnameplates.api.feature.Feature;
 import net.momirealms.customnameplates.api.feature.tag.NameTagConfig;
@@ -39,6 +40,8 @@ public class TagRendererImpl implements TagRenderer {
     private Tag[] rTagsArray;
     private double hatOffset;
     private boolean valid = true;
+    private Set<Integer> cachedPassengers = Set.of();
+    private int ticks;
 
     public TagRendererImpl(UnlimitedTagManager manager, CNPlayer owner) {
         this.owner = owner;
@@ -77,6 +80,7 @@ public class TagRendererImpl implements TagRenderer {
     @Override
     public synchronized void onTick() {
         if (!isValid()) return;
+        this.ticks++;
 
         Set<CNPlayer> playersToUpdatePassengers = new ObjectOpenHashSet<>();
         Set<CNPlayer> tagTranslationUpdates = new ObjectOpenHashSet<>();
@@ -126,9 +130,15 @@ public class TagRendererImpl implements TagRenderer {
         }
 
         // Update passengers
-        Set<Integer> realPassengers = owner.passengers();
-        for (CNPlayer nearby : playersToUpdatePassengers) {
-            updatePassengers(nearby, realPassengers);
+        this.cachedPassengers = owner.passengers();
+        if (ConfigManager.forceUpdatePassengerInterval() > 0 && this.ticks % ConfigManager.forceUpdatePassengerInterval() == 0) {
+            for (CNPlayer nearby : nearbyPlayers) {
+                updatePassengers(nearby, this.cachedPassengers);
+            }
+        } else {
+            for (CNPlayer nearby : playersToUpdatePassengers) {
+                updatePassengers(nearby, this.cachedPassengers);
+            }
         }
 
         // Update relative translation tags
@@ -287,8 +297,7 @@ public class TagRendererImpl implements TagRenderer {
             }
         }
         if (updatePassengers) {
-            Set<Integer> realPassengers = owner.passengers();
-            updatePassengers(another, realPassengers);
+            updatePassengers(another, this.cachedPassengers);
         }
     }
 

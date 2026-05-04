@@ -54,6 +54,7 @@ import net.momirealms.customnameplates.api.util.CharacterUtils;
 import net.momirealms.customnameplates.backend.util.FreeTypeUtils;
 import net.momirealms.customnameplates.common.util.Tuple;
 import org.apache.commons.io.FileUtils;
+import org.bson.types.MaxKey;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
@@ -303,9 +304,8 @@ public class AdvanceManagerImpl implements AdvanceManager {
 
     public AdvanceManagerImpl(CustomNameplates plugin) {
         this.plugin = plugin;
-        this.textWidthCache =
-                Caffeine.newBuilder()
-                        .expireAfterWrite(5, TimeUnit.MINUTES)
+        this.textWidthCache = Caffeine.newBuilder()
+                        .expireAfterAccess(5, TimeUnit.MINUTES)
                         .build();
         this.init();
     }
@@ -911,7 +911,7 @@ public class AdvanceManagerImpl implements AdvanceManager {
             }
 
             registerCharacterFontData(id, ttfCache, (properties) -> {
-                int y = (int) properties.get("shift_y");
+                int y = (int) properties.getOrDefault("shift_y", 0);
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.addProperty("type", "ttf");
                 JsonArray ja = new JsonArray();
@@ -1212,6 +1212,7 @@ public class AdvanceManagerImpl implements AdvanceManager {
 
     private float calculateTextAdvance(String text) {
         List<Tuple<String, Key, Boolean>> iterableTexts = miniMessageToIterable(text);
+        float maxAdvance = 0;
         float totalAdvance = 0;
         for (Tuple<String, Key, Boolean> element : iterableTexts) {
             ConfigurableFontAdvanceData data = customFontDataById(element.mid().asString());
@@ -1225,7 +1226,14 @@ public class AdvanceManagerImpl implements AdvanceManager {
                 if (Character.isHighSurrogate(chars[j])) {
                     advance = data.getAdvance(Character.toCodePoint(chars[j], chars[++j]));
                 } else {
-                    advance = data.getAdvance(chars[j]);
+                    char c = chars[j];
+                    if (c == '\n') {
+                        maxAdvance = Math.max(maxAdvance, totalAdvance);
+                        totalAdvance = 0;
+                        continue;
+                    } else {
+                        advance = data.getAdvance(chars[j]);
+                    }
                 }
                 totalAdvance += advance;
                 if (element.right()) {
@@ -1233,7 +1241,8 @@ public class AdvanceManagerImpl implements AdvanceManager {
                 }
             }
         }
-        return totalAdvance;
+        maxAdvance = Math.max(maxAdvance, totalAdvance);
+        return maxAdvance;
     }
 
     @SuppressWarnings("UnstableApiUsage")

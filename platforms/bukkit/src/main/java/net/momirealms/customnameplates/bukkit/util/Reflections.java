@@ -28,7 +28,7 @@ import java.util.*;
 
 import static java.util.Objects.requireNonNull;
 
-public class Reflections {
+public final class Reflections {
 
     public static void load() {}
 
@@ -879,7 +879,8 @@ public class Reflections {
     public static final Class<?> clazz$ResourceLocation = requireNonNull(
             ReflectionUtils.getClazz(
                     BukkitReflectionUtils.assembleMCClass("resources.ResourceLocation"),
-                    BukkitReflectionUtils.assembleMCClass("resources.MinecraftKey")
+                    BukkitReflectionUtils.assembleMCClass("resources.MinecraftKey"),
+                    BukkitReflectionUtils.assembleMCClass("resources.Identifier")
             )
     );
 
@@ -1230,5 +1231,25 @@ public class Reflections {
             ReflectionUtils.getMethod(
                     clazz$ComponentSerializer, Object.class, new String[] {"deserialize"}, Object.class
             )
+    );
+
+    public static final Class<?> clazz$ClientboundLoginFinishedPacket = requireNonNull(
+            ReflectionUtils.getClazz(
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.login.PacketLoginOutSuccess"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.login.ClientboundLoginFinishedPacket"),
+                    BukkitReflectionUtils.assembleMCClass("network.protocol.login.ClientboundGameProfilePacket")
+            )
+    );
+
+    public static final Class<?> clazz$GameProfile = requireNonNull(
+            ReflectionUtils.getClazz("com.mojang.authlib.GameProfile")
+    );
+
+    public static final Field field$ClientboundLoginFinishedPacket$gameProfile = requireNonNull(
+            ReflectionUtils.getDeclaredField(clazz$ClientboundLoginFinishedPacket, clazz$GameProfile, 0)
+    );
+
+    public static final Field field$GameProfile$name = requireNonNull(
+            ReflectionUtils.getDeclaredField(clazz$GameProfile, String.class, 0)
     );
 }
